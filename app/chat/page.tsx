@@ -310,7 +310,7 @@ export default function ChatPage() {
   return (
     <div className="min-h-dvh flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
       {/* Header */}
-      <header className="sticky top-0 z-10 glass border-b border-white/30 px-3 sm:px-4 py-3 sm:py-4 safe-area-top shadow-sm">
+      <header className="sticky top-0 z-10 glass border-b border-white/30 px-4 py-3 sm:px-4 sm:py-4 safe-area-top shadow-sm">
         <div className="flex items-center gap-3 sm:gap-4">
           <Button 
             variant="ghost" 
@@ -336,7 +336,7 @@ export default function ChatPage() {
       </header>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2 sm:space-y-3 pb-safe">
+      <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-4 sm:py-4 space-y-3 sm:space-y-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
         {messages.map((message) => (
           <ChatMessage key={message._id} message={message} />
         ))}
@@ -350,14 +350,14 @@ export default function ChatPage() {
       </main>
 
       {/* Input Area */}
-      <footer className="sticky bottom-0 glass border-t border-white/30 p-4 sm:p-5 space-y-3 safe-area-bottom shadow-lg">
+      <footer className="sticky bottom-0 glass border-t border-white/30 p-4 sm:p-5 space-y-3 shadow-lg" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
         {showTextInput ? (
           <div className="flex items-center gap-3">
             <Input
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Type your message..."
-              className="flex-1 h-12 sm:h-14 rounded-full px-5 text-sm sm:text-base border-2 border-white/50 focus:border-purple-400 bg-white/80 backdrop-blur-sm shadow-md"
+              className="flex-1 h-14 sm:h-14 rounded-full px-5 text-base sm:text-base border-2 border-white/50 focus:border-purple-400 bg-white/80 backdrop-blur-sm shadow-md"
               onKeyDown={(e) => e.key === "Enter" && sendTextMessage()}
               autoFocus
             />

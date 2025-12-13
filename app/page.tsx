@@ -66,14 +66,14 @@ export default function RegisterPage() {
   return (
     <div className="min-h-dvh flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
       {/* Header */}
-      <header className="pt-10 sm:pt-14 pb-6 sm:pb-8 px-4 sm:px-6 text-center">
+      <header className="pt-8 sm:pt-14 pb-6 sm:pb-8 px-4 sm:px-6 text-center safe-area-top">
         <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full gradient-primary mb-4 sm:mb-5 shadow-lg animate-float">
           <Heart className="h-8 w-8 sm:h-10 sm:w-10 text-white" fill="currentColor" />
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+        <h1 className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
           SafeSpace Salone
         </h1>
-        <p className="text-base sm:text-lg text-gray-600 font-medium">Your private mental health support</p>
+        <p className="text-sm sm:text-lg text-gray-600 font-medium">Your private mental health support</p>
       </header>
 
       {/* Form */}
@@ -98,7 +98,7 @@ export default function RegisterPage() {
               placeholder="your.email@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-12 text-base rounded-xl border-2 focus:border-primary transition-all"
+              className="h-14 text-base rounded-xl border-2 focus:border-primary transition-all"
             />
             <p className="text-xs text-gray-600">
               Add your email to enable login later
@@ -115,7 +115,7 @@ export default function RegisterPage() {
               placeholder="Enter a private nickname..."
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              className="h-12 text-base rounded-xl border-2 focus:border-primary transition-all"
+              className="h-14 text-base rounded-xl border-2 focus:border-primary transition-all"
               maxLength={20}
             />
           </div>
@@ -124,7 +124,7 @@ export default function RegisterPage() {
           <div className="space-y-3 bg-white/60 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-white/50">
             <Label className="text-base font-semibold text-gray-800">What would you like to talk about?</Label>
             <Select value={topic} onValueChange={setTopic}>
-              <SelectTrigger className="h-12 text-base rounded-xl border-2 focus:border-primary transition-all">
+              <SelectTrigger className="h-14 text-base rounded-xl border-2 focus:border-primary transition-all">
                 <SelectValue placeholder="Select a topic..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -153,7 +153,7 @@ export default function RegisterPage() {
           <Button
             type="submit"
             disabled={!nickname.trim() || !topic || isLoading}
-            className="w-full h-14 sm:h-16 text-base sm:text-lg font-bold rounded-2xl gradient-primary text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full h-14 sm:h-16 text-base sm:text-lg font-bold rounded-2xl gradient-primary text-white shadow-xl hover:shadow-2xl transition-all duration-300 active:scale-[0.98] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">

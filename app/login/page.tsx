@@ -73,7 +73,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 p-4 sm:p-6">
+    <div className="min-h-dvh flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 p-4 sm:p-6 safe-area-top safe-area-bottom">
       <Card className="w-full max-w-sm mx-auto glass shadow-2xl border-white/50 rounded-3xl overflow-hidden">
         <CardHeader className="text-center pb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-primary mb-4 mx-auto shadow-lg animate-float">
