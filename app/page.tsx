@@ -124,12 +124,12 @@ export default function RegisterPage() {
           <div className="space-y-3 bg-white/60 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-white/50">
             <Label className="text-base font-semibold text-gray-800">What would you like to talk about?</Label>
             <Select value={topic} onValueChange={setTopic}>
-              <SelectTrigger className="h-14 text-base rounded-xl border-2 focus:border-primary transition-all">
-                <SelectValue placeholder="Select a topic..." />
+              <SelectTrigger className="h-14 text-base rounded-xl border-2 border-purple-200 bg-white/90 backdrop-blur-sm text-gray-800 font-medium shadow-md hover:border-purple-300 focus:border-primary focus:ring-2 focus:ring-purple-200 transition-all">
+                <SelectValue placeholder="Select a topic..." className="text-gray-800" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent className="rounded-xl bg-white border-2 border-purple-100 shadow-xl">
                 {topics.map((t) => (
-                  <SelectItem key={t.value} value={t.value} className="text-base">
+                  <SelectItem key={t.value} value={t.value} className="text-base text-gray-800 font-medium cursor-pointer hover:bg-purple-50 focus:bg-purple-50">
                     {t.label}
                   </SelectItem>
                 ))}
