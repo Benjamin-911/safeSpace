@@ -161,7 +161,7 @@ export default function RegisterPage() {
                 Connecting...
               </span>
             ) : (
-              "Start Talking 🚀"
+              "Start Talking ❤️"
             )}
           </Button>
         </form>
