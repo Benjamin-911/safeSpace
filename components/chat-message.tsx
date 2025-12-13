@@ -41,7 +41,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             )}
           </div>
         ) : (
-          <p className="text-base sm:text-base leading-relaxed break-words font-medium">{message.content}</p>
+          <p className="text-base sm:text-base leading-relaxed break-words font-medium whitespace-pre-line">{message.content}</p>
         )}
         <p className={cn("text-xs mt-2 font-medium", isUser ? "text-white/80" : "text-gray-500")}>
           {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
