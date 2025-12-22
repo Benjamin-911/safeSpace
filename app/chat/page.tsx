@@ -12,7 +12,7 @@ import { getAvatarById } from "@/components/avatar-selector"
 import { getCurrentUserId } from "@/lib/user-session"
 import { generateCounselorResponse } from "@/lib/ai"
 import { transcribeAudio } from "@/lib/audio-transcription"
-import { Lock, Send, ArrowLeft, FileText, Loader2 } from "lucide-react"
+import { Lock, Send, ArrowLeft, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function ChatPage() {
@@ -25,7 +25,6 @@ export default function ChatPage() {
 
   const [text, setText] = useState("")
   const [isRecording, setIsRecording] = useState(false)
-  const [showTextInput, setShowTextInput] = useState(false)
   const [isAIThinking, setIsAIThinking] = useState(false)
   const [sessionResources, setSessionResources] = useState<Record<string, string[]>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -84,7 +83,6 @@ export default function ChatPage() {
 
     const messageText = text.trim()
     setText("")
-    setShowTextInput(false)
 
     // Generate AI counselor response
     setIsAIThinking(true)
@@ -381,51 +379,54 @@ export default function ChatPage() {
       </main>
 
       {/* Input Area */}
-      <footer className="sticky bottom-0 glass border-t border-white/30 p-4 sm:p-5 space-y-3 shadow-lg" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
-        {showTextInput ? (
-          <div className="flex items-center gap-3">
-            <Input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1 h-14 sm:h-14 rounded-full px-5 text-base sm:text-base border-2 border-white/50 focus:border-purple-400 bg-white/80 backdrop-blur-sm shadow-md"
-              onKeyDown={(e) => e.key === "Enter" && sendTextMessage()}
-              autoFocus
-            />
-            <Button
-              type="button"
-              onClick={sendTextMessage}
-              disabled={!text.trim()}
-              size="icon"
-              className="h-12 w-12 sm:h-14 sm:w-14 rounded-full gradient-primary shadow-xl hover:shadow-2xl transition-all transform hover:scale-110 active:scale-95 touch-manipulation disabled:opacity-50"
-            >
-              <Send className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-            </Button>
+      <footer className="sticky bottom-0 glass border-t border-white/30 p-3 sm:p-4 shadow-lg pb-safe">
+        <div className="max-w-4xl mx-auto flex items-end gap-2 px-2">
+          {/* Main Input Container */}
+          <div className="flex-1 bg-white/90 backdrop-blur-sm border-2 border-white/50 rounded-[28px] shadow-sm flex items-center min-h-[56px] transition-all focus-within:border-purple-300 focus-within:shadow-md">
+            {!isRecording ? (
+              <Input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Message SafeSpace..."
+                className="flex-1 bg-transparent border-none shadow-none focus-visible:ring-0 text-gray-800 py-4 px-5 text-base h-auto min-h-[56px]"
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendTextMessage())}
+              />
+            ) : (
+              <div className="flex-1 px-4 flex items-center">
+                {/* This space will be filled by the VoiceRecorder's recording state via props/internal if configured, 
+                    but for now we'll let VoiceRecorder handle the UI when it's in recording mode */}
+                <div className="flex-1 h-14" />
+              </div>
+            )}
+
+            {/* The VoiceRecorder component itself will switch between Mic/Send/Delete states 
+                OR we show the Send button if there is text */}
+            <div className="pr-1.5 pb-1.5">
+              {text.trim() && !isRecording ? (
+                <Button
+                  type="button"
+                  onClick={sendTextMessage}
+                  size="icon"
+                  className="h-11 w-11 rounded-full gradient-primary shadow-lg hover:scale-105 active:scale-95 transition-all text-white flex-shrink-0"
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              ) : (
+                <VoiceRecorder
+                  onSend={sendVoiceMessage}
+                  onCancel={() => { }}
+                  isRecording={isRecording}
+                  setIsRecording={setIsRecording}
+                />
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="flex items-center justify-center gap-4 sm:gap-5">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => setShowTextInput(true)}
-              className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-white/80 backdrop-blur-sm border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all transform hover:scale-110 active:scale-95 touch-manipulation"
-            >
-              <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
-            </Button>
-            <VoiceRecorder
-              onSend={sendVoiceMessage}
-              onCancel={() => { }}
-              isRecording={isRecording}
-              setIsRecording={setIsRecording}
-            />
-          </div>
-        )}
+        </div>
 
         {/* Encrypted badge */}
-        <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-gray-600 font-medium bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm max-w-fit mx-auto">
-          <Lock className="h-3.5 w-3.5 text-purple-500" />
-          <span>End-to-end encrypted</span>
+        <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-widest">
+          <Lock className="h-3 w-3 text-purple-400" />
+          <span>Secured with End-to-End Encryption</span>
         </div>
       </footer>
     </div>
