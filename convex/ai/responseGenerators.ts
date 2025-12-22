@@ -3,24 +3,20 @@
 export class SierraLeoneResponseGenerator {
   private traumaResponses = [
     {
-      trigger: ["war", "rebels", "fighting", "1990s", "conflict"],
-      response: "The war years left deep scars on many Sierra Leoneans. Your pain is valid. What helps you feel safe when memories come? Many find comfort connecting with other war-affected individuals through the Mental Health Coalition."
-    },
-    {
-      trigger: ["ebola", "epidemic", "virus", "quarantine", "2014"],
-      response: "Ebola took so much from our communities. The fear and loss still echo. Are there support groups in your area you can connect with? The trauma from that time is still being processed by many."
-    },
-    {
-      trigger: ["rape", "sexual", "assault", "abuse"],
-      response: "I'm deeply sorry this happened to you. Sexual violence carries heavy shame, but the shame belongs to the perpetrator, not you. RAIC in Freetown offers confidential support. You can reach them at 0800-33333. Your healing matters."
+      trigger: ["sexual", "assault", "abuse", "violence"],
+      response: "I'm deeply sorry this happened to you. What you experienced was not your fault. RAIC in Freetown offers confidential support and can help. You can reach them at 0800-33333. Your healing matters, and you deserve support."
     },
     {
       trigger: ["flashback", "nightmare", "ptsd"],
-      response: "Flashbacks and nightmares can make you feel like you're reliving the trauma. Grounding techniques help - focus on 5 things you can see, 4 you can touch, 3 you can hear. You're safe now, even if it doesn't feel like it."
+      response: "Flashbacks and nightmares can make you feel like you're reliving difficult experiences. Grounding techniques can help - focus on 5 things you can see, 4 you can touch, 3 you can hear. You're safe in this moment, even if it doesn't feel like it."
     },
     {
       trigger: ["accident", "crash", "injured", "hospitalized"],
       response: "Accidents can be really traumatic, especially if you were injured. It's normal to feel shaken up, scared, or keep replaying what happened. Have you been able to talk to family or friends about what happened? Sometimes sharing the experience helps process it."
+    },
+    {
+      trigger: ["trauma", "traumatic", "past", "memories"],
+      response: "Difficult experiences from the past can affect us deeply. Healing takes time, and it's different for everyone. Have you considered talking to a counselor or someone you trust? You don't have to carry this alone."
     }
   ]
 
