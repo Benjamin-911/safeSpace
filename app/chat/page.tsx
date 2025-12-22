@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { useQuery, useMutation } from "convex/react"
+import { useQuery, useMutation, useAction } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,8 +21,8 @@ export default function ChatPage() {
   const user = useQuery(api.users.getUserById, userId ? { userId: userId as any } : "skip")
   const messages = useQuery(api.messages.getMessages, userId ? { userId: userId as any } : "skip") || []
   const sendMessageMutation = useMutation(api.messages.sendMessage)
-  const convexAIResponse = useMutation(api.aiCounselor.processMessage)
-  
+  const convexAIResponse = useAction(api.aiCounselor.processMessage)
+
   const [text, setText] = useState("")
   const [isRecording, setIsRecording] = useState(false)
   const [showTextInput, setShowTextInput] = useState(false)
@@ -36,18 +36,18 @@ export default function ChatPage() {
       router.push("/")
       return
     }
-    
+
     // Skip if we've already sent or if messages are still loading
     if (messages === undefined || welcomeMessageSentRef.current) {
       return
     }
-    
+
     // Check if welcome message already exists in messages
     const hasWelcomeMessage = messages.some(
-      (msg: any) => msg.sender === "counselor" && 
-      msg.content.includes("Hello, I'm here to listen")
+      (msg: any) => msg.sender === "counselor" &&
+        msg.content.includes("Hello, I'm here to listen")
     )
-    
+
     // Add welcome message only once if no messages exist
     if (messages.length === 0 && !hasWelcomeMessage) {
       welcomeMessageSentRef.current = true
@@ -85,67 +85,67 @@ export default function ChatPage() {
     setText("")
     setShowTextInput(false)
 
-      // Generate AI counselor response
-      setIsAIThinking(true)
+    // Generate AI counselor response
+    setIsAIThinking(true)
+    try {
+      // Build conversation history from messages
+      const conversationHistory = (messages || [])
+        .slice(-10)
+        .map((m) => m.content)
+        .filter((content) => content && content.trim().length > 0)
+
+      // Add a small delay to help prevent rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 300))
+
+      // Try Convex AI first (offline-capable, culturally aware), then OpenAI, then local fallback
+      // Note: Convex AI requires 'npx convex dev' to be running
+      let aiResponse: { content: string; suggestions?: string[] }
+      let triedConvex = false
+
+      // Try Convex AI first - it's specifically fine-tuned for Sierra Leone
       try {
-        // Build conversation history from messages
-        const conversationHistory = (messages || [])
-          .slice(-10)
-          .map((m) => m.content)
-          .filter((content) => content && content.trim().length > 0)
+        console.log("Trying Convex AI (fine-tuned for Sierra Leone)...")
+        triedConvex = true
+        const convexResult = await convexAIResponse({
+          message: messageText,
+          userId,
+          context: {
+            topic: user?.topic,
+          }
+        })
 
-        // Add a small delay to help prevent rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 300))
-
-        // Try Convex AI first (offline-capable, culturally aware), then OpenAI, then local fallback
-        // Note: Convex AI requires 'npx convex dev' to be running
-        let aiResponse: { content: string; suggestions?: string[] }
-        let triedConvex = false
-        
-        // Try Convex AI first - it's specifically fine-tuned for Sierra Leone
-        try {
-          console.log("Trying Convex AI (fine-tuned for Sierra Leone)...")
-          triedConvex = true
-          const convexResult = await convexAIResponse({
-            message: messageText,
-            userId,
-            context: {
-              topic: user?.topic,
-            }
-          })
-          
-          // Handle emergency response
-          if (convexResult.isEmergency) {
-            console.warn("EMERGENCY DETECTED:", convexResult)
-          }
-          
-          aiResponse = {
-            content: convexResult.response,
-            suggestions: convexResult.resources
-          }
-        } catch (convexError: any) {
-          // If Convex function not found, it means Convex dev isn't running
-          // Fallback gracefully to OpenAI or local AI
-          const isConvexNotFound = convexError?.message?.includes("Could not find public function") || 
-                                   convexError?.message?.includes("aiCounselor") ||
-                                   convexError?.toString().includes("aiCounselor")
-          
-          if (isConvexNotFound && triedConvex) {
-            console.log("Convex AI not available (run 'npx convex dev'), trying alternatives...")
-          } else {
-            console.warn("Convex AI error:", convexError)
-          }
-          
-          // Try OpenAI, then local fallback
-          try {
-            console.log("Trying OpenAI...")
-            aiResponse = await generateCounselorResponse(messageText, conversationHistory, true, user?.topic, userId)
-          } catch (openAIError) {
-            console.log("OpenAI failed, using local fallback AI...")
-            // Final fallback to local AI (always works)
-            aiResponse = await generateCounselorResponse(messageText, conversationHistory, false, user?.topic, userId)
-          }
+        // Handle emergency response
+        if (convexResult.isEmergency) {
+          console.warn("EMERGENCY DETECTED:", convexResult)
         }
+
+        aiResponse = {
+          content: convexResult.response,
+          suggestions: convexResult.resources
+        }
+      } catch (convexError: any) {
+        // If Convex function not found, it means Convex dev isn't running
+        // Fallback gracefully to OpenAI or local AI
+        const isConvexNotFound = convexError?.message?.includes("Could not find public function") ||
+          convexError?.message?.includes("aiCounselor") ||
+          convexError?.toString().includes("aiCounselor")
+
+        if (isConvexNotFound && triedConvex) {
+          console.log("Convex AI not available (run 'npx convex dev'), trying alternatives...")
+        } else {
+          console.warn("Convex AI error:", convexError)
+        }
+
+        // Try OpenAI, then local fallback
+        try {
+          console.log("Trying OpenAI...")
+          aiResponse = await generateCounselorResponse(messageText, conversationHistory, true, user?.topic, userId)
+        } catch (openAIError) {
+          console.log("OpenAI failed, using local fallback AI...")
+          // Final fallback to local AI (always works)
+          aiResponse = await generateCounselorResponse(messageText, conversationHistory, false, user?.topic, userId)
+        }
+      }
 
       // Save counselor message
       await sendMessageMutation({
@@ -175,7 +175,7 @@ export default function ChatPage() {
 
     // Start transcription and AI thinking
     setIsAIThinking(true)
-    
+
     try {
       // Try to transcribe the audio
       let transcribedText = ""
@@ -206,22 +206,22 @@ export default function ChatPage() {
 
       // Use transcribed text if available, otherwise use a neutral prompt
       // This prevents incorrect intent detection (like war/trauma) when transcription fails
-      const messageToProcess = transcribedText.trim() || 
-        (conversationHistory.length > 0 
+      const messageToProcess = transcribedText.trim() ||
+        (conversationHistory.length > 0
           ? "The user sent a voice message continuing our conversation. Respond empathetically and ask them to share more about what they're feeling, or suggest they type their message if that's easier."
           : "The user sent a voice message to start our conversation. Respond warmly and empathetically, acknowledging they chose to use their voice. Gently ask them to share what they're experiencing, or offer that they can type instead if preferred.")
-      
+
       await new Promise((resolve) => setTimeout(resolve, 300))
-      
+
       // Use same AI system as text messages - try Convex AI first, then OpenAI, then local
       let aiResponse: { content: string; suggestions?: string[] }
       let triedConvex = false
-      
+
       // Try Convex AI first with transcribed text
       try {
         console.log("Trying Convex AI for voice message...")
         triedConvex = true
-        
+
         const convexResult = await convexAIResponse({
           message: messageToProcess,
           userId,
@@ -229,26 +229,26 @@ export default function ChatPage() {
             topic: user?.topic,
           }
         })
-        
+
         if (convexResult.isEmergency) {
           console.warn("EMERGENCY DETECTED in voice message:", convexResult)
         }
-        
+
         aiResponse = {
           content: convexResult.response,
           suggestions: convexResult.resources
         }
       } catch (convexError: any) {
-        const isConvexNotFound = convexError?.message?.includes("Could not find public function") || 
-                                 convexError?.message?.includes("aiCounselor") ||
-                                 convexError?.toString().includes("aiCounselor")
-        
+        const isConvexNotFound = convexError?.message?.includes("Could not find public function") ||
+          convexError?.message?.includes("aiCounselor") ||
+          convexError?.toString().includes("aiCounselor")
+
         if (isConvexNotFound && triedConvex) {
           console.log("Convex AI not available, trying alternatives for voice message...")
         } else {
           console.warn("Convex AI error for voice:", convexError)
         }
-        
+
         // Try OpenAI, then local fallback
         try {
           console.log("Trying OpenAI for voice message...")
@@ -312,10 +312,10 @@ export default function ChatPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 glass border-b border-white/30 px-4 py-3 sm:px-4 sm:py-4 safe-area-top shadow-sm">
         <div className="flex items-center gap-3 sm:gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => router.push("/")} 
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/")}
             className="h-10 w-10 sm:h-12 sm:w-12 rounded-full touch-manipulation hover:bg-white/50 transition-all"
           >
             <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
@@ -384,7 +384,7 @@ export default function ChatPage() {
             </Button>
             <VoiceRecorder
               onSend={sendVoiceMessage}
-              onCancel={() => {}}
+              onCancel={() => { }}
               isRecording={isRecording}
               setIsRecording={setIsRecording}
             />

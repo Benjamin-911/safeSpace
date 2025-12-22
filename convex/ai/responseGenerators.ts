@@ -61,37 +61,58 @@ export class SierraLeoneResponseGenerator {
     }
   ]
 
-  generateResponse(intent: string, message: string): string {
+  generateResponse(intent: string, message: string, facts?: string[]): string {
     const messageLower = message.toLowerCase()
-    
+
+    let baseResponse: string
     switch (intent) {
       case "greeting":
-        return this.getGreetingResponse(messageLower)
+        baseResponse = this.getGreetingResponse(messageLower)
+        break
       case "emergency":
-        return this.getEmergencyResponse()
+        baseResponse = this.getEmergencyResponse()
+        break
       case "crisis":
-        return this.getCrisisResponse()
+        baseResponse = this.getCrisisResponse()
+        break
       case "trauma":
-        return this.getTraumaResponse(messageLower)
+        baseResponse = this.getTraumaResponse(messageLower)
+        break
       case "anxiety":
-        return this.getAnxietyResponse(messageLower)
+        baseResponse = this.getAnxietyResponse(messageLower)
+        break
       case "depression":
-        return this.getDepressionResponse()
+        baseResponse = this.getDepressionResponse()
+        break
       case "addiction":
-        return this.getAddictionResponse(messageLower)
+        baseResponse = this.getAddictionResponse(messageLower)
+        break
       case "grief":
-        return this.getGriefResponse()
+        baseResponse = this.getGriefResponse()
+        break
       case "spiritual":
-        return this.getSpiritualResponse(messageLower)
+        baseResponse = this.getSpiritualResponse(messageLower)
+        break
       case "relationships":
-        return this.getRelationshipResponse()
+        baseResponse = this.getRelationshipResponse()
+        break
       case "practical":
-        return this.getPracticalResponse()
+        baseResponse = this.getPracticalResponse()
+        break
       case "health":
-        return this.getHealthResponse()
+        baseResponse = this.getHealthResponse()
+        break
       default:
-        return this.getGeneralResponse(intent)
+        baseResponse = this.getGeneralResponse(intent)
+        break
     }
+
+    if (facts && facts.length > 0) {
+      const factsText = facts.join("\n")
+      return `${baseResponse}\n\nRelated Information:\n${factsText}`
+    }
+
+    return baseResponse
   }
 
   private getEmergencyResponse(): string {
@@ -112,11 +133,11 @@ You are not alone. Help is available NOW. Your life has value, and there are peo
 
   private getGreetingResponse(message: string): string {
     // Handle Krio greetings
-    if (message.includes("na so") || message.includes("kushe") || 
-        message.includes("how de") || message.includes("how you dey")) {
+    if (message.includes("na so") || message.includes("kushe") ||
+      message.includes("how de") || message.includes("how you dey")) {
       return "Na so! I dey fine, thank you. How you dey? I'm here to listen and support you. Wetin dey worry you today?"
     }
-    
+
     // Regular greetings
     const greetings = [
       "Hello! I'm glad you reached out. I'm here to listen and support you. What's on your mind today?",
@@ -192,11 +213,11 @@ You are not alone. Help is available NOW. Your life has value, and there are peo
     if (topic === "trauma") {
       return "After trauma, here's what I advise: 1) Talk to someone you trust - family or a community member who understands, 2) Practice grounding when you feel overwhelmed - notice 5 things you can see, 4 you can touch, 3 you can hear, 3) Consider connecting with trauma support groups through the Mental Health Coalition, 4) Be patient with yourself - healing takes time, 5) If memories are too overwhelming, consider professional help at Kissy Hospital or RAIC. What feels most helpful for you right now?"
     }
-    
+
     if (topic === "addiction") {
       return "For addiction recovery, here's my advice: 1) Reach out to family - their support is crucial for recovery in Sierra Leone, 2) Contact NACOB at 079-797979 for free counseling and support, 3) Avoid situations and people that trigger substance use, 4) Connect with faith-based recovery groups or community programs if available, 5) Take it one day at a time - recovery is a journey. Remember, you don't have to do this alone. What's your first step?"
     }
-    
+
     return "Here's what I advise: 1) Talk to someone you trust - family or community member, 2) Consider local support resources like community elders or health centers, 3) Take things one day at a time, 4) Be kind to yourself - you're doing the best you can, 5) Don't hesitate to seek professional help if needed. What specific challenge are you facing right now?"
   }
 }

@@ -1,7 +1,6 @@
-// Main AI Counselor Export for Convex
-
 import { FineTunedSierraLeoneAI } from "./ai/mainOrchestrator"
-import { mutation, query } from "./_generated/server"
+import { action, mutation, query } from "./_generated/server"
+import { api } from "./_generated/api"
 import { v } from "convex/values"
 
 // Singleton instance (recreated per request in serverless, but cached per execution)
@@ -14,7 +13,7 @@ function getAIInstance(): FineTunedSierraLeoneAI {
   return aiInstance
 }
 
-export const processMessage = mutation({
+export const processMessage = action({
   args: {
     message: v.string(),
     userId: v.string(),
@@ -27,36 +26,90 @@ export const processMessage = mutation({
   },
   handler: async (ctx, args) => {
     const ai = getAIInstance()
-    
-    // Get user from database to enrich context
-    let user = null
+
+    // 1. Search Knowledge Base for facts
+    let facts: string[] = []
     try {
-      user = await ctx.db.get(args.userId as any)
+      const searchResults = await ctx.runAction(api.knowledgeBase.searchKnowledge, {
+        query: args.message,
+        limit: 2
+      })
+      facts = searchResults.map((r: any) => r.content)
     } catch (e) {
-      // User might not exist yet, continue anyway
+      console.warn("Knowledge search failed:", e)
     }
-    
-    const enhancedContext: Partial<{
-      topic?: string
-      location?: string
-      gender?: "male" | "female"
-      ageGroup?: "teen" | "young_adult" | "adult" | "elder"
-      sessionCount: number
-    }> = {
+
+    // 2. Get user context
+    const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId as any })
+
+    const enhancedContext: any = {
       ...args.context,
       topic: args.context?.topic || (user as any)?.topic,
       sessionCount: ((user as any)?.sessionCount || 0) + 1
     }
-    
-    const result = await ai.processMessage(args.message, enhancedContext)
-    
-    // If emergency, we could log it (but for now just return the response)
-    // In production, you might want to notify counselors or log to emergency_logs table
-    
+
+    // 3. Analyze intent locally first (for emergency detection)
+    const intent = ai.intentClassifier.classify(args.message)
+    const isEmergency = intent.primaryIntent === "emergency" || intent.confidence > 5
+
+    if (isEmergency) {
+      const result = await ai.processMessage(args.message, enhancedContext, facts)
+      return {
+        response: result.response,
+        isEmergency: true,
+        resources: result.suggestedResources,
+        confidence: result.confidence,
+        timestamp: Date.now()
+      }
+    }
+
+    // 4. For non-emergencies, use Gemini for synthesis
+    try {
+      const geminiApiKey = process.env.GEMINI_API_KEY
+      if (!geminiApiKey) throw new Error("GEMINI_API_KEY not set")
+
+      const factsContext = facts.length > 0
+        ? `\n\nUSE THESE FACTS TO INFORM YOUR RESPONSE:\n${facts.join("\n")}`
+        : ""
+
+      const systemInstruction = `You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone. 
+      Your goals are to provide support, listen actively, and guide users toward appropriate resources.
+      Always respond with cultural sensitivity to the Sierra Leonean context (e.g., using Krio greetings like 'Kushe' or 'Na so' occasionally, acknowledging local challenges).
+      If facts are provided below, synthesize them naturally into your response instead of listing them.
+      ${factsContext}`
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role: "user", parts: [{ text: args.message }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
+        if (aiResponse) {
+          return {
+            response: aiResponse.trim(),
+            isEmergency: false,
+            resources: ai.getSuggestedResources(intent.primaryIntent, enhancedContext.location),
+            confidence: 0.9,
+            timestamp: Date.now()
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Gemini synthesis failed, falling back to local:", e)
+    }
+
+    // Fallback to local orchestrator if Gemini fails
+    const result = await ai.processMessage(args.message, enhancedContext, facts)
     return {
       response: result.response,
       isEmergency: result.isEmergency,
-      requiresFollowup: result.requiresFollowup,
       resources: result.suggestedResources,
       confidence: result.confidence,
       timestamp: Date.now()

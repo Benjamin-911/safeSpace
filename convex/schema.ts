@@ -9,7 +9,7 @@ export default defineSchema({
     topic: v.string(),
     createdAt: v.string(),
   }).index("by_email", ["email"]),
-  
+
   messages: defineTable({
     userId: v.string(),
     content: v.string(),
@@ -18,5 +18,14 @@ export default defineSchema({
     audioUrl: v.optional(v.string()),
     timestamp: v.string(),
   }).index("by_user", ["userId"]),
+
+  knowledgeBase: defineTable({
+    content: v.string(),
+    embedding: v.array(v.float64()),
+    metadata: v.optional(v.any()),
+  }).vectorIndex("by_embedding", {
+    vectorField: "embedding",
+    dimensions: 768,
+  }),
 })
 

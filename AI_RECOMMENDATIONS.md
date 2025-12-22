@@ -1,129 +1,66 @@
-# AI Service Recommendations
+# AI Service Recommendations (Updated)
 
-## Current Issues with Gemini
-- ❌ Free tier rate limits (20 requests)
-- ❌ Quota exceeded frequently
-- ❌ v1/v1beta API compatibility issues
-- ✅ Good when it works
-- ✅ Free tier available
+## 🆓 Best Free Options for Development
 
-## Recommended Alternatives
-
-### 1. **OpenAI (RECOMMENDED) ⭐**
-**Best for: Reliability & Ease of Use**
+### 1. **Google Gemini 1.5 Flash** (Recommended) ⭐
+**Best for: All-in-one Free Solution**
 
 **Pros:**
-- ✅ Very reliable API
-- ✅ Good free tier ($5 credit, usually enough for testing)
-- ✅ Excellent documentation
-- ✅ Stable API (no version conflicts)
-- ✅ Better rate limits
-- ✅ Easy to implement
+- ✅ **Completely Free**: 1,500 requests per day (as of Dec 2025).
+- ✅ **Integrated Embeddings**: Free embedding API (crucial for your Knowledge Base).
+- ✅ **Huge Context**: 1 Million tokens (can "read" your entire system documentation).
+- ✅ **Reliable**: Modern v1 API is much more stable than older versions.
 
 **Cons:**
-- ⚠️ Costs money after free credits (but very cheap - $0.15 per 1M tokens)
-- ⚠️ Requires credit card for free tier
-
-**Cost:** 
-- Free: $5 credit (usually lasts weeks/months for small projects)
-- Paid: ~$0.15 per 1M input tokens, ~$0.60 per 1M output tokens
-
-**Setup:** Very easy - just need API key
+- ⚠️ Data used to improve models in free tier (privacy consideration for mental health).
+- ⚠️ Rate limits can be hit during high usage.
 
 ---
 
-### 2. **Anthropic Claude**
-**Best for: High Quality Responses**
+### 2. **Groq (Llama 3 / Mixtral)**
+**Best for: Instant Speed**
 
 **Pros:**
-- ✅ Excellent response quality
-- ✅ Good for counseling/mental health
-- ✅ Very natural conversations
+- ✅ **Insanely Fast**: Responses are almost instant.
+- ✅ **Free Beta**: Currently free for many open-source models.
+- ✅ **High Quality**: Llama 3 is comparable to GPT-4 for many tasks.
 
 **Cons:**
-- ⚠️ More expensive
-- ⚠️ Free tier limited
-- ⚠️ More complex setup
-
-**Cost:** Higher than OpenAI
+- ⚠️ **No Embeddings**: You still need another provider (like Gemini) for the Knowledge Base.
+- ⚠️ Beta status: Could become paid at any time.
 
 ---
 
-### 3. **Improve Local Fallback AI**
-**Best for: Zero Cost & Privacy**
+### 3. **OpenAI (GPT-4o mini)**
+**Best for: Reliability & Privacy**
 
 **Pros:**
-- ✅ Completely free
-- ✅ No API limits
-- ✅ Private (no data sent to external APIs)
-- ✅ Always available
+- ✅ **Professional Grade**: Very low latency and high quality.
+- ✅ **Privacy**: Won't use your data to train models (if using API).
+- ✅ **Cheap**: $0.15 per 1M tokens is effectively free for development.
 
 **Cons:**
-- ⚠️ Less sophisticated responses
-- ⚠️ No real "intelligence"
-- ⚠️ Requires good prompt engineering
-
-**Current Status:** Basic fallback exists, but could be improved
+- ⚠️ **No true free API tier**: Requires a minimum $5 deposit/credit.
 
 ---
 
-### 4. **Multiple API Keys (Rotation)**
-**Best for: Staying with Gemini**
+## Technical Recommendation
 
-**Pros:**
-- ✅ Keep using Gemini
-- ✅ Spread load across keys
+| Goal | Service | Price | Features |
+|------|---------|-------|----------|
+| **100% Free** | Gemini 1.5 Flash | $0 | Chat + Embeddings |
+| **Max Speed** | Groq | $0 | Chat Only |
+| **Production** | OpenAI | $$ | Chat + Embeddings |
 
-**Cons:**
-- ⚠️ Still have rate limits per key
-- ⚠️ More complex implementation
-- ⚠️ Still free tier limitations
-
----
-
-## My Recommendation: **OpenAI**
-
-### Why OpenAI?
-1. **Reliability** - Very stable, no quota issues like Gemini
-2. **Free tier** - $5 credit is generous for development
-3. **Easy migration** - Similar API structure, easy to switch
-4. **Better rate limits** - Won't hit limits as easily
-5. **Proven** - Widely used, well-documented
-
-### Migration Steps (if you choose OpenAI):
-1. Get API key from https://platform.openai.com/api-keys
-2. Update `.env.local` with `OPENAI_API_KEY`
-3. Update API route to use OpenAI instead of Gemini
-4. Test - should work immediately
-
-### Cost Estimate:
-- For a mental health app with ~100 messages/day:
-- ~$0.50 - $2.00 per month (very affordable)
-- Free tier usually covers weeks/months of development
+### My Suggestion for SafeSpace:
+If you want to avoid costs right now, **switch to Gemini 1.5 Flash**. 
+- It covers both **Chat** and **Embeddings** (RAG) for free.
+- I can update your code to use the modern `gemini-1.5-flash` model which is much better than the one in your older notes.
 
 ---
 
-## Quick Comparison Table
-
-| Service | Cost | Reliability | Quality | Setup |
-|---------|------|-------------|---------|-------|
-| **OpenAI** | $ (free tier) | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Easy |
-| **Claude** | $$ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Medium |
-| **Gemini** | Free | ⭐⭐ | ⭐⭐⭐⭐ | Easy |
-| **Local AI** | Free | ⭐⭐⭐ | ⭐⭐ | Medium |
-
----
-
-## Recommendation Summary
-
-**For production:** Use **OpenAI** - most reliable, good free tier, affordable costs
-
-**For development/testing:** Current fallback AI + wait for Gemini quota reset, or switch to OpenAI
-
-**For zero cost:** Improve the local fallback AI with better prompts
-
-Would you like me to:
-1. Switch to OpenAI? (Recommended)
-2. Improve the local fallback AI?
-3. Set up multiple API keys for rotation?
+## How to Switch to Gemini 1.5 Flash
+1. Get a free API key from [Google AI Studio](https://aistudio.google.com/).
+2. Run `npx convex env set GEMINI_API_KEY your-key`.
+3. Let me know, and I will update `aiCounselor.ts` and `knowledgeBase.ts` to use it!
 

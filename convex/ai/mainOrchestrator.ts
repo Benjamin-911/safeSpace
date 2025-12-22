@@ -8,13 +8,13 @@ export class FineTunedSierraLeoneAI {
   private intentClassifier: IntentClassifier
   private responseGenerator: SierraLeoneResponseGenerator
   private culturalAdapter: SierraLeoneCulturalAdapter
-  
+
   private conversationMemory: Array<{
     message: string
     response: string
     timestamp: number
   }> = []
-  
+
   private userContext: {
     topic?: string
     location?: string
@@ -30,8 +30,9 @@ export class FineTunedSierraLeoneAI {
   }
 
   async processMessage(
-    userMessage: string, 
-    context?: Partial<typeof this.userContext>
+    userMessage: string,
+    context?: Partial<typeof this.userContext>,
+    facts?: string[]
   ): Promise<{
     response: string
     isEmergency: boolean
@@ -43,20 +44,20 @@ export class FineTunedSierraLeoneAI {
     if (context) {
       this.userContext = { ...this.userContext, ...context }
     }
-    
+
     // Analyze intent
     const intent = this.intentClassifier.classify(userMessage)
-    
+
     // Check for emergency or crisis
     const isEmergency = intent.primaryIntent === "emergency" || intent.confidence > 5
     const isCrisis = intent.primaryIntent === "crisis" || intent.confidence > 3
-    
+
     // Check for advice requests
-    const isAdviceRequest = userMessage.toLowerCase().includes("what do you advise") || 
-                           userMessage.toLowerCase().includes("what should i do") ||
-                           userMessage.toLowerCase().includes("what can i do") ||
-                           userMessage.toLowerCase().includes("how can you help")
-    
+    const isAdviceRequest = userMessage.toLowerCase().includes("what do you advise") ||
+      userMessage.toLowerCase().includes("what should i do") ||
+      userMessage.toLowerCase().includes("what can i do") ||
+      userMessage.toLowerCase().includes("how can you help")
+
     // Generate base response
     let response: string
     if (isEmergency) {
@@ -65,29 +66,31 @@ export class FineTunedSierraLeoneAI {
       response = this.responseGenerator.generateResponse("crisis", userMessage)
     } else if (isAdviceRequest) {
       // Use conversation memory to determine topic for advice
-      const recentTopic = this.extractTopics(this.conversationMemory.map(m => m.message))[0] || 
-                         this.userContext.topic
+      const recentTopic = this.extractTopics(this.conversationMemory.map(m => m.message))[0] ||
+        this.userContext.topic
       response = this.responseGenerator.getAdviceResponse(recentTopic || intent.primaryIntent)
     } else {
+      // Use facts if available to enrich general response
       response = this.responseGenerator.generateResponse(
-        intent.primaryIntent, 
-        userMessage
+        intent.primaryIntent,
+        userMessage,
+        facts
       )
     }
-    
+
     // Adapt to Sierra Leone context
     response = this.culturalAdapter.adaptResponse(
-      response, 
+      response,
       this.userContext.location,
       isEmergency
     )
-    
+
     // Personalize with user context
     if (this.userContext.gender) {
       const address = this.userContext.gender === "male" ? "brother" : "sister"
       response = response.replace(/my brother\/sister/g, `my ${address}`)
     }
-    
+
     // Use conversation memory to avoid repetition
     if (this.conversationMemory.length > 0) {
       const recentTopics = this.extractTopics(this.conversationMemory.map(m => m.message))
@@ -95,19 +98,19 @@ export class FineTunedSierraLeoneAI {
         response = this.addContextualReference(response, recentTopics, userMessage)
       }
     }
-    
+
     // Store in conversation memory
     this.conversationMemory.push({
       message: userMessage,
       response,
       timestamp: Date.now()
     })
-    
+
     // Keep only last 10 messages
     if (this.conversationMemory.length > 10) {
       this.conversationMemory.shift()
     }
-    
+
     // Generate follow-up question 40% of the time (not for emergencies)
     let requiresFollowup = false
     if (!isEmergency && !isCrisis && Math.random() < 0.4) {
@@ -123,7 +126,7 @@ export class FineTunedSierraLeoneAI {
       response += ` ${followUps[Math.floor(Math.random() * followUps.length)]}`
       requiresFollowup = true
     }
-    
+
     return {
       response,
       isEmergency,
@@ -136,7 +139,7 @@ export class FineTunedSierraLeoneAI {
   private extractTopics(messages: string[]): string[] {
     const topics: string[] = []
     const allText = messages.join(" ").toLowerCase()
-    
+
     const topicKeywords: Record<string, string[]> = {
       trauma: ["trauma", "traumatic", "accident", "crash", "ptsd", "flashback", "nightmare"],
       addiction: ["addiction", "addicted", "kush", "tramadol", "drug", "alcohol", "substance"],
@@ -149,13 +152,13 @@ export class FineTunedSierraLeoneAI {
       health: ["sick", "ill", "pain", "health"],
       financial: ["money", "financial", "bills", "debt"]
     }
-    
+
     for (const [topic, keywords] of Object.entries(topicKeywords)) {
       if (keywords.some(keyword => allText.includes(keyword))) {
         topics.push(topic)
       }
     }
-    
+
     return topics
   }
 
@@ -164,7 +167,7 @@ export class FineTunedSierraLeoneAI {
     if (recentTopics.some(topic => response.toLowerCase().includes(topic))) {
       return response
     }
-    
+
     const topic = recentTopics[0]
     const references: Record<string, string> = {
       work: "Earlier you mentioned work - is this related?",
@@ -173,11 +176,11 @@ export class FineTunedSierraLeoneAI {
       health: "Is this related to the health concerns you mentioned?",
       financial: "This connects to the money worries you shared earlier."
     }
-    
+
     if (references[topic] && Math.random() < 0.5) {
       return `${response} ${references[topic]}`
     }
-    
+
     return response
   }
 
@@ -194,9 +197,9 @@ export class FineTunedSierraLeoneAI {
       practical: ["Ministry of Social Welfare", "Local NGOs", "Community Resources"],
       health: ["Connaught Hospital", "Local Health Centers", "Traditional Healers"]
     }
-    
+
     const baseResources = resources[intent] || ["Ministry of Health Hotline", "Local Health Center"]
-    
+
     // Add location-specific resources if available
     if (location) {
       const localResources = this.culturalAdapter.getLocalResources(location)
@@ -204,7 +207,7 @@ export class FineTunedSierraLeoneAI {
         return [...baseResources, ...localResources.slice(0, 2)]
       }
     }
-    
+
     return baseResources.slice(0, 5) // Limit to 5 resources
   }
 
@@ -216,7 +219,7 @@ export class FineTunedSierraLeoneAI {
   // Get conversation summary for context
   getConversationSummary(): string {
     if (this.conversationMemory.length === 0) return ""
-    
+
     const topics = this.extractTopics(this.conversationMemory.map(m => m.message))
     return `User has discussed: ${topics.join(", ") || "general concerns"}.`
   }
