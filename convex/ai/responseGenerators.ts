@@ -107,12 +107,64 @@ export class SierraLeoneResponseGenerator {
         break
     }
 
+    // Integrate facts naturally into the response
     if (facts && facts.length > 0) {
-      const factsText = facts.join("\n")
-      return `${baseResponse}\n\nRelated Information:\n${factsText}`
+      return this.synthesizeFacts(baseResponse, facts, intent)
     }
 
     return baseResponse
+  }
+
+  private synthesizeFacts(baseResponse: string, facts: string[], intent: string): string {
+    // Extract helpful contact info from facts
+    const phoneNumbers: string[] = []
+    const resources: string[] = []
+
+    facts.forEach(fact => {
+      // Extract phone numbers (common patterns: 0xxx-xxxxx, 919, 116, etc.)
+      const phoneMatch = fact.match(/(\d{3,4}[-\s]?\d{3,6}|\b\d{3}\b)/g)
+      if (phoneMatch) {
+        phoneNumbers.push(...phoneMatch)
+      }
+
+      // Extract organization names
+      const orgMatch = fact.match(/(RAIC|NACOB|Rainbo Initiative|Kissy|Mental Health Helpline|Central Mosque|St\. George's)/gi)
+      if (orgMatch) {
+        resources.push(...orgMatch)
+      }
+    })
+
+    // Build a natural sentence weaving in the facts
+    let enhancement = ""
+
+    if (intent === "addiction" && resources.includes("NACOB")) {
+      const nacobPhone = phoneNumbers.find(p => p.includes("079") || p.includes("797979"))
+      if (nacobPhone) {
+        enhancement = `\n\nThe National Drug Control Board (NACOB) offers free, confidential addiction counseling. You can reach them at ${nacobPhone}. They understand what you're going through and want to help.`
+      }
+    } else if (intent === "trauma" && resources.some(r => r.toLowerCase().includes("raic") || r.toLowerCase().includes("rainbo"))) {
+      const raicPhone = phoneNumbers.find(p => p.includes("0800") || p.includes("33333"))
+      if (raicPhone) {
+        enhancement = `\n\nIf you've experienced trauma or violence, the Rainbo Initiative (RAIC) in Freetown provides confidential, compassionate support. You can call them anytime at ${raicPhone}. You're not alone.`
+      }
+    } else if (intent === "crisis" || intent === "anxiety") {
+      const helpline = phoneNumbers.find(p => p === "919")
+      if (helpline) {
+        enhancement = `\n\nThe Mental Health Helpline (919) is available if you need immediate support. It's free, confidential, and staffed by people who care.`
+      }
+    } else if (intent === "spiritual" && resources.length > 0) {
+      enhancement = `\n\nMany in Sierra Leone find strength through faith. Spiritual leaders at the Central Mosque or St. George's Cathedral can offer guidance and community support.`
+    }
+
+    // If we found relevant facts, add them naturally; otherwise keep the base response
+    if (enhancement) {
+      return baseResponse + enhancement
+    }
+
+    // Fallback: if we have facts but couldn't synthesize them naturally, mention them briefly
+    if (facts.length > 0) {
+      return `${baseResponse}\n\nThere are also resources available that can help. Would you like to know more about them?`
+    }
   }
 
   private getEmergencyResponse(): string {
@@ -205,7 +257,13 @@ You are not alone. Help is available NOW. Your life has value, and there are peo
   }
 
   private getGeneralResponse(intent: string): string {
-    return "I hear you, and I want you to know that your feelings are valid. In Sierra Leone, we believe in community support and caring for each other. Can you tell me more about what's been on your mind? Sometimes talking it through helps, even if we don't have all the answers."
+    const generalResponses = [
+      "I hear you. Whatever you're going through, it's okay to talk about it. What's been weighing on your mind lately?",
+      "Thank you for sharing that with me. I'm here to listen. Can you tell me a bit more about what you're experiencing?",
+      "It sounds like you have something important to discuss. I'm here to support you. What would help you most right now?",
+      "I appreciate you reaching out. Many people in Sierra Leone face challenges, and talking about them is a sign of strength. How can I best support you?"
+    ]
+    return generalResponses[Math.floor(Math.random() * generalResponses.length)]
   }
 
   // Handle advice requests
