@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 export async function GET(request: NextRequest) {
   try {
     // Get API key from environment or use default
-    const geminiApiKey = process.env.GEMINI_API_KEY?.trim() || "AIzaSyCdWtE26Fls0P7b-Cln_i3Ms4E7gAC4jpo"
+    const geminiApiKey = process.env.GEMINI_API_KEY?.trim()
 
     if (!geminiApiKey) {
       return NextResponse.json(
