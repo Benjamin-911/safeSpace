@@ -3,6 +3,8 @@ import { action, mutation, query } from "./_generated/server"
 import { api } from "./_generated/api"
 import { v } from "convex/values"
 
+import { GeminiProvider, GroqProvider, cascadeAIProviders } from "./ai/aiProviders"
+
 // Singleton instance (recreated per request in serverless, but cached per execution)
 let aiInstance: FineTunedSierraLeoneAI | null = null
 
@@ -63,60 +65,31 @@ export const processMessage = action({
       }
     }
 
-    // 4. For non-emergencies, use Gemini for synthesis
-    try {
-      const geminiApiKey = process.env.GEMINI_API_KEY
-      console.log("[AI Counselor] Checking Gemini API Key presence:", !!geminiApiKey)
+    // 4. For non-emergencies, use AI cascade (Gemini → Groq → Templates)
+    const systemInstruction = `You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone. 
+    Your goals are to provide support, listen actively, and guide users toward appropriate resources.
+    Respond with cultural sensitivity to the Sierra Leonean context. You may use Krio greetings like 'Kushe' or 'Na so' ONLY at the very beginning of a conversation or when greeting someone for the first time. Do not use them in follow-up messages.
+    If facts are provided below, synthesize them naturally into your response instead of listing them.`
 
-      if (!geminiApiKey) {
-        console.warn("[AI Counselor] GEMINI_API_KEY not found in environment")
-        throw new Error("GEMINI_API_KEY not set")
+    // Set up provider cascade
+    const providers = [
+      new GeminiProvider(),
+      new GroqProvider()
+    ]
+
+    console.log("[AI Counselor] Attempting AI cascade...")
+    const cascadeResult = await cascadeAIProviders(providers, args.message, systemInstruction, facts)
+
+    if (cascadeResult.success && cascadeResult.response) {
+      console.log(`[AI Counselor] ✓ ${cascadeResult.provider} succeeded!`)
+      return {
+        response: cascadeResult.response,
+        isEmergency: false,
+        resources: ai.getSuggestedResources(intent.primaryIntent, enhancedContext.location),
+        confidence: 0.9,
+        provider: cascadeResult.provider, // Track which provider was used
+        timestamp: Date.now()
       }
-
-      const factsContext = facts.length > 0
-        ? `\n\nUSE THESE FACTS TO INFORM YOUR RESPONSE:\n${facts.join("\n")}`
-        : ""
-
-      const systemInstruction = `You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone. 
-      Your goals are to provide support, listen actively, and guide users toward appropriate resources.
-      Respond with cultural sensitivity to the Sierra Leonean context. You may use Krio greetings like 'Kushe' or 'Na so' ONLY at the very beginning of a conversation or when greeting someone for the first time. Do not use them in follow-up messages.
-      If facts are provided below, synthesize them naturally into your response instead of listing them.
-      ${factsContext}`
-
-      console.log("[AI Counselor] Attempting Gemini synthesis...")
-
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemInstruction }] },
-          contents: [{ role: "user", parts: [{ text: args.message }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
-
-        if (aiResponse) {
-          console.log("[AI Counselor] Gemini synthesis successful!")
-          return {
-            response: aiResponse.trim(),
-            isEmergency: false,
-            resources: ai.getSuggestedResources(intent.primaryIntent, enhancedContext.location),
-            confidence: 0.9,
-            timestamp: Date.now()
-          }
-        } else {
-          console.warn("[AI Counselor] Gemini returned empty response or invalid format")
-        }
-      } else {
-        const errorText = await response.text()
-        console.error(`[AI Counselor] Gemini API error (${response.status}):`, errorText)
-      }
-    } catch (e) {
-      console.error("[AI Counselor] Gemini synthesis exception:", e)
     }
 
     // Fallback to local orchestrator if Gemini fails
