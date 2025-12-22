@@ -27,6 +27,7 @@ export default function ChatPage() {
   const [isRecording, setIsRecording] = useState(false)
   const [showTextInput, setShowTextInput] = useState(false)
   const [isAIThinking, setIsAIThinking] = useState(false)
+  const [sessionResources, setSessionResources] = useState<Record<string, string[]>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const welcomeMessageSentRef = useRef(false)
@@ -68,7 +69,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  }, [messages, isAIThinking])
 
   const sendTextMessage = async () => {
     if (!text.trim() || !userId || !user) return
@@ -148,12 +149,20 @@ export default function ChatPage() {
       }
 
       // Save counselor message
-      await sendMessageMutation({
+      const messageId = await sendMessageMutation({
         userId,
         content: aiResponse.content,
         sender: "counselor",
         type: "text",
       })
+
+      // Store resources locally for the current session
+      if (aiResponse.suggestions && aiResponse.suggestions.length > 0) {
+        setSessionResources(prev => ({
+          ...prev,
+          [messageId.toString()]: aiResponse.suggestions!
+        }))
+      }
     } catch (error) {
       console.error("Error generating AI response:", error)
       // Fallback message
@@ -272,12 +281,21 @@ export default function ChatPage() {
         }
       }
 
-      await sendMessageMutation({
+      // Save counselor message
+      const messageId = await sendMessageMutation({
         userId,
         content: aiResponse.content,
         sender: "counselor",
         type: "text",
       })
+
+      // Store resources locally for the current session
+      if (aiResponse.suggestions && aiResponse.suggestions.length > 0) {
+        setSessionResources(prev => ({
+          ...prev,
+          [messageId.toString()]: aiResponse.suggestions!
+        }))
+      }
     } catch (error) {
       console.error("Error processing voice message:", error)
       // Fallback message for voice
@@ -336,14 +354,27 @@ export default function ChatPage() {
       </header>
 
       {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-4 sm:py-4 space-y-3 sm:space-y-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+      <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-4 sm:py-4 space-y-2" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
         {messages.map((message) => (
-          <ChatMessage key={message._id} message={message} />
+          <ChatMessage
+            key={message._id}
+            message={{
+              ...message,
+              // Use sessionResources for displaying AI suggestions without DB modification
+              resources: sessionResources[message._id]
+            }}
+          />
         ))}
         {isAIThinking && (
-          <div className="flex items-center gap-3 text-gray-600 px-4 py-3 bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 max-w-fit">
-            <Loader2 className="h-5 w-5 animate-spin text-purple-500" />
-            <span className="text-sm font-medium">Counselor is thinking...</span>
+          <div className="flex justify-start mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl px-5 py-4 border border-white/50 shadow-sm flex items-center gap-3">
+              <div className="flex gap-1">
+                <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-1.5 h-1.5 bg-purple-600 rounded-full animate-bounce"></div>
+              </div>
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest px-1">Counselor is thinking</span>
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />
