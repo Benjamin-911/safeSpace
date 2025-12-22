@@ -66,7 +66,12 @@ export const processMessage = action({
     // 4. For non-emergencies, use Gemini for synthesis
     try {
       const geminiApiKey = process.env.GEMINI_API_KEY
-      if (!geminiApiKey) throw new Error("GEMINI_API_KEY not set")
+      console.log("[AI Counselor] Checking Gemini API Key presence:", !!geminiApiKey)
+
+      if (!geminiApiKey) {
+        console.warn("[AI Counselor] GEMINI_API_KEY not found in environment")
+        throw new Error("GEMINI_API_KEY not set")
+      }
 
       const factsContext = facts.length > 0
         ? `\n\nUSE THESE FACTS TO INFORM YOUR RESPONSE:\n${facts.join("\n")}`
@@ -78,7 +83,9 @@ export const processMessage = action({
       If facts are provided below, synthesize them naturally into your response instead of listing them.
       ${factsContext}`
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+      console.log("[AI Counselor] Attempting Gemini synthesis...")
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiApiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -91,7 +98,9 @@ export const processMessage = action({
       if (response.ok) {
         const data = await response.json()
         const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text
+
         if (aiResponse) {
+          console.log("[AI Counselor] Gemini synthesis successful!")
           return {
             response: aiResponse.trim(),
             isEmergency: false,
@@ -99,13 +108,19 @@ export const processMessage = action({
             confidence: 0.9,
             timestamp: Date.now()
           }
+        } else {
+          console.warn("[AI Counselor] Gemini returned empty response or invalid format")
         }
+      } else {
+        const errorText = await response.text()
+        console.error(`[AI Counselor] Gemini API error (${response.status}):`, errorText)
       }
     } catch (e) {
-      console.warn("Gemini synthesis failed, falling back to local:", e)
+      console.error("[AI Counselor] Gemini synthesis exception:", e)
     }
 
     // Fallback to local orchestrator if Gemini fails
+    console.log("[AI Counselor] Falling back to local orchestrator for response generation")
     const result = await ai.processMessage(args.message, enhancedContext, facts)
     return {
       response: result.response,

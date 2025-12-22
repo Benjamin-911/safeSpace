@@ -5,7 +5,7 @@ import { SierraLeoneResponseGenerator } from "./responseGenerators"
 import { SierraLeoneCulturalAdapter } from "./culturalAdapter"
 
 export class FineTunedSierraLeoneAI {
-  private intentClassifier: IntentClassifier
+  public intentClassifier: IntentClassifier
   private responseGenerator: SierraLeoneResponseGenerator
   private culturalAdapter: SierraLeoneCulturalAdapter
 
@@ -184,7 +184,7 @@ export class FineTunedSierraLeoneAI {
     return response
   }
 
-  private getSuggestedResources(intent: string, location?: string): string[] {
+  public getSuggestedResources(intent: string, location?: string): string[] {
     const resources: Record<string, string[]> = {
       emergency: ["116 Emergency", "919 Mental Health Helpline", "Kissy Hospital (24/7)"],
       crisis: ["919 Mental Health Helpline", "Kissy Hospital", "Call 116"],
