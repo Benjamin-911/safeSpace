@@ -79,7 +79,7 @@ export const processMessage = action({
 
       const systemInstruction = `You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone. 
       Your goals are to provide support, listen actively, and guide users toward appropriate resources.
-      Always respond with cultural sensitivity to the Sierra Leonean context (e.g., using Krio greetings like 'Kushe' or 'Na so' occasionally, acknowledging local challenges).
+      Respond with cultural sensitivity to the Sierra Leonean context. You may use Krio greetings like 'Kushe' or 'Na so' ONLY at the very beginning of a conversation or when greeting someone for the first time. Do not use them in follow-up messages.
       If facts are provided below, synthesize them naturally into your response instead of listing them.
       ${factsContext}`
 
@@ -91,7 +91,7 @@ export const processMessage = action({
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemInstruction }] },
           contents: [{ role: "user", parts: [{ text: args.message }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
         }),
       })
 

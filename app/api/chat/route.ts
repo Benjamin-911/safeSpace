@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
     const contents: Array<{ role: "user" | "model"; parts: [{ text: string }] }> = []
 
     // Add system instruction (Gemini 1.5 supports system_instruction, but for simplicity we'll prepend it to the first message if needed, or use the dedicated property)
-    const systemInstruction = `You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone...` // truncated for brevity but keep the logic
+    const systemInstruction = `You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone.
+Your goals are to provide support, listen actively, and guide users toward appropriate resources.
+Respond with cultural sensitivity to the Sierra Leonean context. You may use Krio greetings like 'Kushe' or 'Na so' ONLY at the very beginning of a conversation or when greeting someone for the first time. Do not use them in follow-up messages.
+Provide thoughtful, complete responses that help users feel heard and supported.`
 
     // Add current user message with system instruction if it's the first message
     const history = (conversationHistory || []).slice(-10)
@@ -83,7 +86,7 @@ export async function POST(request: NextRequest) {
         contents: contents,
         generationConfig: {
           temperature: 0.8,
-          maxOutputTokens: 600,
+          maxOutputTokens: 1200,
         },
       }),
     })
