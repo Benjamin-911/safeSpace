@@ -52,7 +52,22 @@ export default function HomePage() {
       router.push("/chat")
     } catch (err: any) {
       console.error("Login error:", err)
-      setError(err.message || "Login failed. Please try again.")
+      // Extract clean error message from Convex error
+      let errorMessage = "Login failed. Please try again."
+      if (err.message) {
+        // Convex errors often have format: "Uncaught Error: actual message"
+        const match = err.message.match(/Uncaught Error: (.+?)(?:\.|$)/)
+        if (match) {
+          errorMessage = match[1]
+        } else if (err.message.includes("No account found")) {
+          errorMessage = "No account found with this email. Please register first."
+        } else if (err.message.includes("Incorrect password")) {
+          errorMessage = "Incorrect password. Please try again."
+        } else if (!err.message.includes("[CONVEX")) {
+          errorMessage = err.message
+        }
+      }
+      setError(errorMessage)
       setIsLoading(false)
     }
   }

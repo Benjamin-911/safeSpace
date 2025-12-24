@@ -7,12 +7,10 @@ import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChatMessage } from "@/components/chat-message"
-import { VoiceRecorder } from "@/components/voice-recorder"
 import { getAvatarById } from "@/components/avatar-selector"
 import { getCurrentUserId } from "@/lib/user-session"
 import { generateCounselorResponse } from "@/lib/ai"
-import { transcribeAudio } from "@/lib/audio-transcription"
-import { Lock, Send, ArrowLeft, Loader2 } from "lucide-react"
+import { Lock, Send, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function ChatPage() {
@@ -24,7 +22,6 @@ export default function ChatPage() {
   const convexAIResponse = useAction(api.aiCounselor.processMessage)
 
   const [text, setText] = useState("")
-  const [isRecording, setIsRecording] = useState(false)
   const [isAIThinking, setIsAIThinking] = useState(false)
   const [sessionResources, setSessionResources] = useState<Record<string, string[]>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -174,139 +171,6 @@ export default function ChatPage() {
     }
   }
 
-  const sendVoiceMessage = async (audioBlob: Blob) => {
-    if (!userId || !user) return
-
-    const audioUrl = URL.createObjectURL(audioBlob)
-
-    // Start transcription and AI thinking
-    setIsAIThinking(true)
-
-    try {
-      // Try to transcribe the audio
-      let transcribedText = ""
-      try {
-        console.log("Transcribing audio with Whisper...")
-        transcribedText = await transcribeAudio(audioBlob, true) // Use OpenAI Whisper API
-        console.log("Transcription successful:", transcribedText)
-      } catch (transcriptionError: any) {
-        console.warn("Audio transcription failed:", transcriptionError)
-        // Continue with fallback if transcription fails
-        transcribedText = ""
-      }
-
-      // Save voice message with transcription if available
-      await sendMessageMutation({
-        userId,
-        content: transcribedText || "Voice message",
-        sender: "user",
-        type: "voice",
-        audioUrl,
-      })
-
-      // Build conversation history
-      const conversationHistory = (messages || [])
-        .slice(-10)
-        .map((m) => m.content)
-        .filter((content) => content && content.trim().length > 0)
-
-      // Use transcribed text if available, otherwise use a neutral prompt
-      // This prevents incorrect intent detection (like war/trauma) when transcription fails
-      const messageToProcess = transcribedText.trim() ||
-        (conversationHistory.length > 0
-          ? "The user sent a voice message continuing our conversation. Respond empathetically and ask them to share more about what they're feeling, or suggest they type their message if that's easier."
-          : "The user sent a voice message to start our conversation. Respond warmly and empathetically, acknowledging they chose to use their voice. Gently ask them to share what they're experiencing, or offer that they can type instead if preferred.")
-
-      await new Promise((resolve) => setTimeout(resolve, 300))
-
-      // Use same AI system as text messages - try Convex AI first, then OpenAI, then local
-      let aiResponse: { content: string; suggestions?: string[] }
-      let triedConvex = false
-
-      // Try Convex AI first with transcribed text
-      try {
-        console.log("Trying Convex AI for voice message...")
-        triedConvex = true
-
-        const convexResult = await convexAIResponse({
-          message: messageToProcess,
-          userId,
-          context: {
-            topic: user?.topic,
-          }
-        })
-
-        if (convexResult.isEmergency) {
-          console.warn("EMERGENCY DETECTED in voice message:", convexResult)
-        }
-
-        aiResponse = {
-          content: convexResult.response,
-          suggestions: convexResult.resources
-        }
-      } catch (convexError: any) {
-        const isConvexNotFound = convexError?.message?.includes("Could not find public function") ||
-          convexError?.message?.includes("aiCounselor") ||
-          convexError?.toString().includes("aiCounselor")
-
-        if (isConvexNotFound && triedConvex) {
-          console.log("Convex AI not available, trying alternatives for voice message...")
-        } else {
-          console.warn("Convex AI error for voice:", convexError)
-        }
-
-        // Try OpenAI, then local fallback
-        try {
-          console.log("Trying OpenAI for voice message...")
-          aiResponse = await generateCounselorResponse(
-            messageToProcess,
-            conversationHistory,
-            true,
-            user?.topic,
-            userId
-          )
-        } catch (openAIError) {
-          console.log("OpenAI failed for voice, using local fallback...")
-          // Final fallback - use local AI with transcribed text or generic message
-          aiResponse = await generateCounselorResponse(
-            messageToProcess,
-            conversationHistory,
-            false,
-            user?.topic,
-            userId
-          )
-        }
-      }
-
-      // Save counselor message
-      const messageId = await sendMessageMutation({
-        userId,
-        content: aiResponse.content,
-        sender: "counselor",
-        type: "text",
-      })
-
-      // Store resources locally for the current session
-      if (aiResponse.suggestions && aiResponse.suggestions.length > 0) {
-        setSessionResources(prev => ({
-          ...prev,
-          [messageId.toString()]: aiResponse.suggestions!
-        }))
-      }
-    } catch (error) {
-      console.error("Error processing voice message:", error)
-      // Fallback message for voice
-      await sendMessageMutation({
-        userId,
-        content: "Thank you for sending a voice message. I'm here to listen. Can you tell me more about what you're experiencing? You can type your message or send another voice message.",
-        sender: "counselor",
-        type: "text",
-      })
-    } finally {
-      setIsAIThinking(false)
-    }
-  }
-
   if (user === undefined || messages === undefined) {
     return (
       <div className="min-h-dvh flex items-center justify-center">
@@ -383,57 +247,36 @@ export default function ChatPage() {
       </main>
 
       {/* Input Area */}
-      <footer className="sticky bottom-0 glass border-t border-white/30 p-3 sm:p-4 shadow-lg pb-safe">
-        <div className="max-w-4xl mx-auto flex items-end gap-2 px-2">
+      <footer className="sticky bottom-0 z-20 bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50 border-t border-white/30 p-3 sm:p-4 shadow-lg">
+        <div className="max-w-4xl mx-auto px-2">
           {/* Main Input Container */}
-          <div className="flex-1 bg-white/90 backdrop-blur-sm border-2 border-white/50 rounded-[28px] shadow-sm flex items-center min-h-[56px] transition-all focus-within:border-purple-300 focus-within:shadow-md">
-            {!isRecording ? (
-              <Input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Message SafeSpace..."
-                className="flex-1 bg-transparent border-none shadow-none focus-visible:ring-0 text-gray-800 py-4 px-5 text-base h-auto min-h-[56px]"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    sendTextMessage()
-                  }
-                }}
-              />
-            ) : (
-              <div className="flex-1 px-4 flex items-center">
-                {/* This space will be filled by the VoiceRecorder's recording state via props/internal if configured, 
-                    but for now we'll let VoiceRecorder handle the UI when it's in recording mode */}
-                <div className="flex-1 h-14" />
-              </div>
-            )}
-
-            {/* The VoiceRecorder component itself will switch between Mic/Send/Delete states 
-                OR we show the Send button if there is text */}
-            <div className="pr-1.5 pb-1.5">
-              {text.trim() && !isRecording ? (
-                <Button
-                  type="button"
-                  onClick={sendTextMessage}
-                  size="icon"
-                  className="h-11 w-11 rounded-full gradient-primary shadow-lg hover:scale-105 active:scale-95 transition-all text-white flex-shrink-0"
-                >
-                  <Send className="h-5 w-5" />
-                </Button>
-              ) : (
-                <VoiceRecorder
-                  onSend={sendVoiceMessage}
-                  onCancel={() => { }}
-                  isRecording={isRecording}
-                  setIsRecording={setIsRecording}
-                />
-              )}
-            </div>
+          <div className="flex items-center gap-2 bg-white rounded-full shadow-md border-2 border-purple-100 p-1.5">
+            <Input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Message SafeSpace..."
+              className="flex-1 bg-transparent border-none shadow-none focus-visible:ring-0 text-gray-800 py-3 px-4 text-base h-12"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  sendTextMessage()
+                }
+              }}
+            />
+            <Button
+              type="button"
+              onClick={sendTextMessage}
+              disabled={!text.trim() || isAIThinking}
+              size="icon"
+              className="h-10 w-10 rounded-full gradient-primary shadow-lg hover:scale-105 active:scale-95 transition-all text-white flex-shrink-0 disabled:opacity-50"
+            >
+              <Send className="h-5 w-5" />
+            </Button>
           </div>
         </div>
 
         {/* Encrypted badge */}
-        <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-widest">
+        <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-gray-400 font-bold uppercase tracking-widest pb-safe">
           <Lock className="h-3 w-3 text-purple-400" />
           <span>Secured with End-to-End Encryption</span>
         </div>
