@@ -12,6 +12,18 @@ export const getMessages = query({
   },
 })
 
+// Query to get recent messages for a user with a limit
+export const getRecentMessages = query({
+  args: { userId: v.string(), limit: v.number() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(args.limit)
+  },
+})
+
 // Mutation to send a message
 export const sendMessage = mutation({
   args: {
@@ -42,13 +54,13 @@ export const cleanupDuplicateWelcomeMessages = mutation({
       .query("messages")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect()
-    
+
     // Find duplicate welcome messages
     const welcomeMessages = allMessages.filter(
-      (msg) => msg.sender === "counselor" && 
-      msg.content.includes("Hello, I'm here to listen")
+      (msg) => msg.sender === "counselor" &&
+        msg.content.includes("Hello, I'm here to listen")
     )
-    
+
     // Keep only the first one, delete the rest
     if (welcomeMessages.length > 1) {
       const toDelete = welcomeMessages.slice(1) // Keep first, delete rest
@@ -57,7 +69,7 @@ export const cleanupDuplicateWelcomeMessages = mutation({
       }
       return { deleted: toDelete.length, kept: 1 }
     }
-    
+
     return { deleted: 0, kept: welcomeMessages.length }
   },
 })

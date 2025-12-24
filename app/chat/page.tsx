@@ -37,19 +37,18 @@ export default function ChatPage() {
       return
     }
 
-    // Skip if we've already sent or if messages are still loading
+    // Skip if we've already sent in this session or if messages are still loading
     if (messages === undefined || welcomeMessageSentRef.current) {
       return
     }
 
-    // Check if welcome message already exists in messages
-    const hasWelcomeMessage = messages.some(
-      (msg: any) => msg.sender === "counselor" &&
-        msg.content.includes("Hello, I'm here to listen")
+    // Check if there are ANY counselor messages already (not just the welcome)
+    const hasCounselorMessage = messages.some(
+      (msg: any) => msg.sender === "counselor"
     )
 
-    // Add welcome message only once if no messages exist
-    if (messages.length === 0 && !hasWelcomeMessage) {
+    // Only send welcome message if there are NO counselor messages at all
+    if (!hasCounselorMessage) {
       welcomeMessageSentRef.current = true
       sendMessageMutation({
         userId,
@@ -58,13 +57,13 @@ export default function ChatPage() {
         type: "text",
       }).catch((err) => {
         console.error("Error sending welcome message:", err)
-        welcomeMessageSentRef.current = false // Reset on error so we can retry
+        // Don't reset on error - prevent spam
       })
-    } else if (messages.length > 0 || hasWelcomeMessage) {
-      // If messages exist or welcome message exists, mark as sent
+    } else {
+      // Mark as sent so we don't try again
       welcomeMessageSentRef.current = true
     }
-  }, [userId, messages, sendMessageMutation])
+  }, [userId, messages, sendMessageMutation, router])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -331,8 +330,9 @@ export default function ChatPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/settings")}
             className="h-10 w-10 sm:h-12 sm:w-12 rounded-full touch-manipulation hover:bg-white/50 transition-all"
+            title="Settings"
           >
             <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700" />
           </Button>
@@ -345,9 +345,13 @@ export default function ChatPage() {
             </div>
             <p className="text-xs sm:text-sm text-gray-600 font-medium">Online • Confidential</p>
           </div>
-          <div className={cn("w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0 shadow-lg border-4 border-white", userAvatar.bg)}>
+          <button
+            onClick={() => router.push("/settings")}
+            className={cn("w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0 shadow-lg border-4 border-white hover:scale-105 transition-transform cursor-pointer", userAvatar.bg)}
+            title="Account Settings"
+          >
             {userAvatar.emoji}
-          </div>
+          </button>
         </div>
       </header>
 

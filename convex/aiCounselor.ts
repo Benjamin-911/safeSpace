@@ -71,14 +71,23 @@ export const processMessage = action({
     Respond with cultural sensitivity to the Sierra Leonean context. You may use Krio greetings like 'Kushe' or 'Na so' ONLY at the very beginning of a conversation or when greeting someone for the first time. Do not use them in follow-up messages.
     If facts are provided below, synthesize them naturally into your response instead of listing them.`
 
-    // Set up provider cascade
-    const providers = [
-      new GeminiProvider(),
-      new GroqProvider()
-    ]
+    // Fetch recent message history for context using a query (actions can't use ctx.db directly)
+    const recentMessages = await ctx.runQuery(api.messages.getRecentMessages, {
+      userId: args.userId,
+      limit: 10
+    })
 
-    console.log("[AI Counselor] Attempting AI cascade...")
-    const cascadeResult = await cascadeAIProviders(providers, args.message, systemInstruction, facts)
+    // Map to the format the cascade expects (role/content)
+    const history = recentMessages.reverse().map((msg: { sender: string; content: string }) => ({
+      role: msg.sender === "counselor" ? "assistant" as const : "user" as const,
+      content: msg.content
+    }))
+
+    // Initialize AI providers for cascade
+    const providers = [new GeminiProvider(), new GroqProvider()]
+
+    console.log(`[AI Counselor] Attempting AI cascade with ${history.length} messages of context...`)
+    const cascadeResult = await cascadeAIProviders(providers, args.message, systemInstruction, facts, history)
 
     if (cascadeResult.success && cascadeResult.response) {
       console.log(`[AI Counselor] ✓ ${cascadeResult.provider} succeeded!`)

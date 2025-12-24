@@ -1,8 +1,13 @@
 // AI Provider Interface and Implementations
 
+export interface Message {
+    role: "user" | "assistant" | "model"
+    content: string
+}
+
 export interface AIProvider {
     name: string
-    generateResponse(prompt: string, systemInstruction: string, facts: string[]): Promise<string>
+    generateResponse(prompt: string, systemInstruction: string, facts: string[], history?: Message[]): Promise<string>
 }
 
 export interface AIProviderResult {
@@ -16,7 +21,7 @@ export interface AIProviderResult {
 export class GeminiProvider implements AIProvider {
     name = "Gemini 1.5 Flash"
 
-    async generateResponse(prompt: string, systemInstruction: string, facts: string[]): Promise<string> {
+    async generateResponse(prompt: string, systemInstruction: string, facts: string[], history: Message[] = []): Promise<string> {
         const geminiApiKey = process.env.GEMINI_API_KEY
         if (!geminiApiKey) {
             throw new Error("GEMINI_API_KEY not configured")
@@ -28,12 +33,18 @@ export class GeminiProvider implements AIProvider {
 
         const fullSystemInstruction = systemInstruction + factsContext
 
+        const contents = history.map((msg: Message) => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }]
+        }))
+        contents.push({ role: "user", parts: [{ text: prompt }] })
+
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiApiKey}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 system_instruction: { parts: [{ text: fullSystemInstruction }] },
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                contents,
                 generationConfig: { temperature: 0.7, maxOutputTokens: 1200 },
             }),
         })
@@ -58,7 +69,7 @@ export class GeminiProvider implements AIProvider {
 export class GroqProvider implements AIProvider {
     name = "Groq (Llama 3.1)"
 
-    async generateResponse(prompt: string, systemInstruction: string, facts: string[]): Promise<string> {
+    async generateResponse(prompt: string, systemInstruction: string, facts: string[], history: Message[] = []): Promise<string> {
         const groqApiKey = process.env.GROQ_API_KEY
         if (!groqApiKey) {
             throw new Error("GROQ_API_KEY not configured")
@@ -70,6 +81,15 @@ export class GroqProvider implements AIProvider {
 
         const fullSystemInstruction = systemInstruction + factsContext
 
+        const messages = [
+            { role: "system", content: fullSystemInstruction },
+            ...history.map((msg: Message) => ({
+                role: msg.role === "model" ? "assistant" as const : msg.role as "user" | "assistant" | "system",
+                content: msg.content
+            })),
+            { role: "user", content: prompt }
+        ]
+
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -78,10 +98,7 @@ export class GroqProvider implements AIProvider {
             },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
-                messages: [
-                    { role: "system", content: fullSystemInstruction },
-                    { role: "user", content: prompt }
-                ],
+                messages,
                 temperature: 0.7,
                 max_tokens: 1200
             }),
@@ -108,12 +125,13 @@ export async function cascadeAIProviders(
     providers: AIProvider[],
     prompt: string,
     systemInstruction: string,
-    facts: string[]
+    facts: string[],
+    history: Message[] = []
 ): Promise<AIProviderResult> {
     for (const provider of providers) {
         try {
             console.log(`[AI Cascade] Trying ${provider.name}...`)
-            const response = await provider.generateResponse(prompt, systemInstruction, facts)
+            const response = await provider.generateResponse(prompt, systemInstruction, facts, history)
             console.log(`[AI Cascade] ✓ ${provider.name} succeeded`)
             return {
                 success: true,
