@@ -161,6 +161,8 @@ export class SierraLeoneResponseGenerator {
     if (facts.length > 0) {
       return `${baseResponse}\n\nThere are also resources available that can help. Would you like to know more about them?`
     }
+
+    return baseResponse
   }
 
   private getEmergencyResponse(): string {

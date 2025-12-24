@@ -11,7 +11,8 @@ interface ChatMessageProps {
     sender: "user" | "counselor"
     type: "text" | "voice"
     audioUrl?: string
-    timestamp: string
+    timestamp?: string
+    _creationTime?: number
     resources?: string[] // Optional resources for the current session
   }
 }
@@ -44,7 +45,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 <Mic className="h-4 w-4" />
                 <span>Voice Message</span>
               </div>
-              {message.audioUrl && (
+              {message.audioUrl ? (
                 <audio
                   src={message.audioUrl}
                   controls
@@ -54,7 +55,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   )}
                 />
               ) : (
-              <p className="text-sm italic opacity-70">Audio recording...</p>
+                <p className="text-sm italic opacity-70">Audio recording...</p>
               )}
               {message.content && message.content !== "Voice message" && (
                 <p className="text-sm leading-relaxed border-t border-white/20 pt-2 mt-1 italic">
@@ -72,7 +73,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             "text-[10px] mt-1.5 font-bold uppercase tracking-wider opacity-60",
             isUser ? "text-white/70" : "text-gray-400"
           )}>
-            {new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {new Date(message.timestamp || message._creationTime || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
 

@@ -389,7 +389,12 @@ export default function ChatPage() {
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Message SafeSpace..."
                 className="flex-1 bg-transparent border-none shadow-none focus-visible:ring-0 text-gray-800 py-4 px-5 text-base h-auto min-h-[56px]"
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendTextMessage())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    sendTextMessage()
+                  }
+                }}
               />
             ) : (
               <div className="flex-1 px-4 flex items-center">
