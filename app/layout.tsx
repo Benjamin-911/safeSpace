@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ConvexClientProvider } from "@/components/convex-provider"
+import { PwarRegistration } from "@/components/pwa-registration"
 import "./globals.css"
 
 const _inter = Inter({ subsets: ["latin"] })
@@ -49,6 +50,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
         <ConvexClientProvider>
+          <PwarRegistration />
           {children}
           <Analytics />
         </ConvexClientProvider>

@@ -41,12 +41,15 @@ export const processMessage = action({
       console.warn("Knowledge search failed:", e)
     }
 
-    // 2. Get user context
+    // 2. Get user context and long-term memory
     const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId as any })
+    const latestSummary = await ctx.runQuery(api.summaries.getLatestSummary, { userId: args.userId })
+    const messages = await ctx.runQuery(api.messages.getMessages, { userId: args.userId })
 
     const enhancedContext: any = {
       ...args.context,
       topic: args.context?.topic || (user as any)?.topic,
+      counselorPersona: (user as any)?.counselorPersona || "neutral",
       sessionCount: ((user as any)?.sessionCount || 0) + 1
     }
 
@@ -66,9 +69,21 @@ export const processMessage = action({
     }
 
     // 4. For non-emergencies, use AI cascade (Gemini → Groq → Templates)
-    const systemInstruction = `You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone. 
+    let personaInstruction = "You are a compassionate, empathetic, and professional mental health counselor based in Sierra Leone."
+    if (enhancedContext.counselorPersona === "sister_mabinty") {
+      personaInstruction = "You are Sister Mabinty, a compassionate, maternal, and empathetic mental health counselor based in Sierra Leone. Speak with the warmth and wisdom of a caring older sister or mother figure."
+    } else if (enhancedContext.counselorPersona === "brother_sorie") {
+      personaInstruction = "You are Brother Sorie, a supportive, protective, and empathetic mental health counselor based in Sierra Leone. Speak with the strength and guidance of a caring older brother or father figure."
+    }
+
+    const systemInstruction = `${personaInstruction} 
+    Your name is ${enhancedContext.counselorPersona === "sister_mabinty" ? "Sister Mabinty" : enhancedContext.counselorPersona === "brother_sorie" ? "Brother Sorie" : "SafeSpace Counselor"}.
+    Always introduce yourself by name if it's the beginning of the conversation.
+    
+    ${latestSummary ? `PAST CONTEXT (Summary of previous discussions): ${latestSummary.content}` : ""}
+    
     Your goals are to provide support, listen actively, and guide users toward appropriate resources.
-    Respond with cultural sensitivity to the Sierra Leonean context. You may use Krio greetings like 'Kushe' or 'Na so' ONLY at the very beginning of a conversation or when greeting someone for the first time. Do not use them in follow-up messages.
+    Respond with cultural sensitivity to the Sierra Leonean context. You may use Krio greetings like 'Kushe' or 'Na so' or 'Padi' ONLY at the very beginning of a conversation or when greeting someone for the first time. Do not use them in follow-up messages.
     If facts are provided below, synthesize them naturally into your response instead of listing them.`
 
     // Fetch recent message history for context using a query (actions can't use ctx.db directly)
@@ -89,28 +104,63 @@ export const processMessage = action({
     console.log(`[AI Counselor] Attempting AI cascade with ${history.length} messages of context...`)
     const cascadeResult = await cascadeAIProviders(providers, args.message, systemInstruction, facts, history)
 
+    let finalResponse: {
+      response: string;
+      isEmergency: boolean;
+      resources: string[];
+      confidence: number;
+      timestamp: number;
+      provider?: string;
+    }
+
     if (cascadeResult.success && cascadeResult.response) {
       console.log(`[AI Counselor] ✓ ${cascadeResult.provider} succeeded!`)
-      return {
+      finalResponse = {
         response: cascadeResult.response,
         isEmergency: false,
         resources: ai.getSuggestedResources(intent.primaryIntent, enhancedContext.location),
         confidence: 0.9,
-        provider: cascadeResult.provider, // Track which provider was used
+        provider: cascadeResult.provider,
+        timestamp: Date.now()
+      }
+    } else {
+      // Fallback to local orchestrator if cascade fails
+      console.log("[AI Counselor] Falling back to local orchestrator for response generation")
+      const result = await ai.processMessage(args.message, enhancedContext, facts)
+      finalResponse = {
+        response: result.response,
+        isEmergency: result.isEmergency,
+        resources: result.suggestedResources,
+        confidence: result.confidence,
         timestamp: Date.now()
       }
     }
 
-    // Fallback to local orchestrator if Gemini fails
-    console.log("[AI Counselor] Falling back to local orchestrator for response generation")
-    const result = await ai.processMessage(args.message, enhancedContext, facts)
-    return {
-      response: result.response,
-      isEmergency: result.isEmergency,
-      resources: result.suggestedResources,
-      confidence: result.confidence,
-      timestamp: Date.now()
+    // 5. Trigger long-term memory summarization if needed (background)
+    const unsummarizedCount = messages.length - (latestSummary?.messageCount || 0)
+    if (unsummarizedCount > 15) {
+      console.log(`[summarization] Triggering summary for user ${args.userId}...`)
+      const summaryPayload = messages.map(m => ({
+        role: m.sender === "counselor" ? "counselor" as const : "user" as const,
+        content: m.content
+      }))
+
+      // Run summarization action and save result
+      ctx.runAction(api.ai.summarizer.summarizeConversation, {
+        userId: args.userId,
+        messages: summaryPayload
+      }).then((summaryContent) => {
+        if (summaryContent) {
+          ctx.runMutation(api.summaries.saveSummary, {
+            userId: args.userId,
+            content: summaryContent,
+            messageCount: messages.length
+          }).catch(e => console.error("Failed to save summary:", e))
+        }
+      }).catch(e => console.error("Summarization action failed:", e))
     }
+
+    return finalResponse
   }
 })
 

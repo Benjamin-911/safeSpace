@@ -21,6 +21,7 @@ export class FineTunedSierraLeoneAI {
     gender?: "male" | "female"
     ageGroup?: "teen" | "young_adult" | "adult" | "elder"
     sessionCount: number
+    counselorPersona?: string
   } = { sessionCount: 0 }
 
   constructor() {
@@ -61,9 +62,9 @@ export class FineTunedSierraLeoneAI {
     // Generate base response
     let response: string
     if (isEmergency) {
-      response = this.responseGenerator.generateResponse("emergency", userMessage)
+      response = this.responseGenerator.generateResponse("emergency", userMessage, undefined, this.userContext.counselorPersona)
     } else if (isCrisis) {
-      response = this.responseGenerator.generateResponse("crisis", userMessage)
+      response = this.responseGenerator.generateResponse("crisis", userMessage, undefined, this.userContext.counselorPersona)
     } else if (isAdviceRequest) {
       // Use conversation memory to determine topic for advice
       const recentTopic = this.extractTopics(this.conversationMemory.map(m => m.message))[0] ||
@@ -74,7 +75,8 @@ export class FineTunedSierraLeoneAI {
       response = this.responseGenerator.generateResponse(
         intent.primaryIntent,
         userMessage,
-        facts
+        facts,
+        this.userContext.counselorPersona
       )
     }
 

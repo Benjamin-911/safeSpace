@@ -1,7 +1,11 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Mic, Info, Phone, ExternalLink } from "lucide-react"
+import { Mic, Info, Phone, ExternalLink, Bookmark, BookmarkCheck } from "lucide-react"
+import { useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
+import { useState } from "react"
+import { toast } from "sonner"
 
 interface ChatMessageProps {
   message: {
@@ -14,11 +18,40 @@ interface ChatMessageProps {
     timestamp?: string
     _creationTime?: number
     resources?: string[] // Optional resources for the current session
-  }
+  },
+  userId?: string // User ID for saving resources
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, userId }: ChatMessageProps) {
   const isUser = message.sender === "user"
+  const saveResourceMutation = useMutation(api.resources.saveResource)
+  const [savedItems, setSavedItems] = useState<Set<string>>(new Set())
+
+  const getCategoryFromTitle = (title: string): string => {
+    const t = title.toLowerCase()
+    if (t.includes("emergency") || t.includes("116")) return "Emergency"
+    if (t.includes("helpline") || t.includes("help") || t.includes("919")) return "Helpline"
+    if (t.includes("hospital") || t.includes("clinic") || t.includes("medical")) return "Clinic"
+    if (t.includes("support") || t.includes("group") || t.includes("community")) return "Support"
+    return "General"
+  }
+
+  const handleSaveResource = async (resourceTitle: string) => {
+    if (!userId) return
+
+    try {
+      await saveResourceMutation({
+        userId,
+        title: resourceTitle,
+        category: getCategoryFromTitle(resourceTitle),
+      })
+      setSavedItems(prev => new Set(prev).add(resourceTitle))
+      toast.success("Resource saved to your collection!")
+    } catch (error) {
+      console.error("Error saving resource:", error)
+      toast.error("Failed to save resource")
+    }
+  }
 
   return (
     <div
@@ -95,15 +128,40 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-800 line-clamp-2">{resource}</p>
-                      <button
-                        className="mt-2 text-[11px] font-bold text-purple-600 flex items-center gap-1 hover:text-purple-700 transition-colors"
-                        onClick={() => {
-                          if (hasPhone) window.location.href = `tel:${hasPhone[0]}`
-                        }}
-                      >
-                        {hasPhone ? "Call Now" : "Learn More"}
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center gap-3 mt-2">
+                        <button
+                          className="text-[11px] font-bold text-purple-600 flex items-center gap-1 hover:text-purple-700 transition-colors"
+                          onClick={() => {
+                            if (hasPhone) {
+                              navigator.clipboard.writeText(hasPhone[0])
+                              toast.success("Number copied to clipboard")
+                            }
+                          }}
+                        >
+                          {hasPhone ? "Copy Number" : "Learn More"}
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                        <button
+                          className={cn(
+                            "text-[11px] font-bold flex items-center gap-1 transition-colors",
+                            savedItems.has(resource) ? "text-green-600" : "text-gray-500 hover:text-purple-600"
+                          )}
+                          onClick={() => handleSaveResource(resource)}
+                          disabled={savedItems.has(resource)}
+                        >
+                          {savedItems.has(resource) ? (
+                            <>
+                              <BookmarkCheck className="w-3 h-3" />
+                              Saved
+                            </>
+                          ) : (
+                            <>
+                              <Bookmark className="w-3 h-3" />
+                              Save
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -22,6 +22,12 @@ const topics = [
     { value: "grief", label: "Grief" },
 ]
 
+const personas = [
+    { value: "neutral", label: "SafeSpace Counselor (Neutral)", icon: "✨" },
+    { value: "sister_mabinty", label: "Sister Mabinty (Female)", icon: "🌸" },
+    { value: "brother_sorie", label: "Brother Sorie (Male)", icon: "🛡️" },
+]
+
 export default function RegisterPage() {
     const router = useRouter()
     const registerUser = useMutation(api.users.registerUser)
@@ -32,6 +38,7 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [nickname, setNickname] = useState("")
     const [topic, setTopic] = useState("")
+    const [persona, setPersona] = useState("neutral")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
@@ -74,6 +81,7 @@ export default function RegisterPage() {
                 nickname: nickname.trim(),
                 avatar,
                 topic,
+                counselorPersona: persona,
             })
 
             // Store the Convex user ID for session management
@@ -84,7 +92,20 @@ export default function RegisterPage() {
             router.push("/chat")
         } catch (err: any) {
             console.error("Error creating user:", err)
-            setError(err.message || "Registration failed. Please try again.")
+
+            // Extract clean error message from Convex error
+            let errorMessage = "Registration failed. Please try again."
+            if (err.message) {
+                // Convex errors often have format: "Uncaught Error: actual message"
+                const match = err.message.match(/Uncaught Error: (.+?)(?:\.|$)/)
+                if (match) {
+                    errorMessage = match[1]
+                } else if (!err.message.includes("[CONVEX")) {
+                    errorMessage = err.message
+                }
+            }
+
+            setError(errorMessage)
             setIsLoading(false)
         }
     }
@@ -215,6 +236,38 @@ export default function RegisterPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    {/* AI Counselor Persona */}
+                    <div className="space-y-2 bg-white/60 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-white/50">
+                        <Label className="text-sm font-semibold text-gray-800">Who would you like to talk to?</Label>
+                        <div className="grid grid-cols-1 gap-3">
+                            {personas.map((p) => (
+                                <div
+                                    key={p.value}
+                                    onClick={() => setPersona(p.value)}
+                                    className={`relative flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${persona === p.value
+                                        ? "border-purple-500 bg-purple-50 shadow-md transform scale-[1.02]"
+                                        : "border-purple-100 bg-white/80 hover:border-purple-300"
+                                        }`}
+                                >
+                                    <span className="text-2xl">{p.icon}</span>
+                                    <div className="flex-1 text-left">
+                                        <p className="font-bold text-gray-800 text-sm">{p.label}</p>
+                                        <p className="text-[10px] text-gray-500 font-medium">
+                                            {p.value === "sister_mabinty" ? "Caring & maternal tone" :
+                                                p.value === "brother_sorie" ? "Supportive & brotherly tone" :
+                                                    "Professional and balanced"}
+                                        </p>
+                                    </div>
+                                    {persona === p.value && (
+                                        <div className="bg-purple-500 rounded-full p-1">
+                                            <Shield className="h-3 w-3 text-white" />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Privacy badges */}

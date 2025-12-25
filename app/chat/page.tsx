@@ -14,7 +14,7 @@ import { ChatMessage } from "@/components/chat-message"
 import { getAvatarById } from "@/components/avatar-selector"
 import { getCurrentUserId } from "@/lib/user-session"
 import { generateCounselorResponse } from "@/lib/ai"
-import { Lock, Send, ArrowLeft } from "lucide-react"
+import { ArrowLeft, Send, Mic, Lock, MessageSquare, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function ChatPage() {
@@ -207,12 +207,23 @@ export default function ChatPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <h1 className="font-bold text-base sm:text-lg truncate bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Your Counselor
+                {user.counselorPersona === "sister_mabinty" ? "Sister Mabinty" :
+                  user.counselorPersona === "brother_sorie" ? "Brother Sorie" :
+                    "SafeSpace Counselor"}
               </h1>
               <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 flex-shrink-0" />
             </div>
             <p className="text-xs sm:text-sm text-gray-600 font-medium">Online • Confidential</p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/resources")}
+            className="h-10 w-10 sm:h-12 sm:w-12 rounded-full touch-manipulation hover:bg-white/50 transition-all text-purple-600"
+            title="Resources"
+          >
+            <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" />
+          </Button>
           <button
             onClick={() => router.push("/settings")}
             className={cn("w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0 shadow-lg border-4 border-white hover:scale-105 transition-transform cursor-pointer", userAvatar.bg)}
@@ -228,6 +239,7 @@ export default function ChatPage() {
         {messages.map((message) => (
           <ChatMessage
             key={message._id}
+            userId={userId}
             message={{
               ...message,
               // Use sessionResources for displaying AI suggestions without DB modification

@@ -22,6 +22,12 @@ const topics = [
     { value: "grief", label: "Grief" },
 ]
 
+const personas = [
+    { value: "neutral", label: "SafeSpace Counselor (Neutral)", icon: "✨" },
+    { value: "sister_mabinty", label: "Sister Mabinty (Female)", icon: "🌸" },
+    { value: "brother_sorie", label: "Brother Sorie (Male)", icon: "🛡️" },
+]
+
 export default function SettingsPage() {
     const router = useRouter()
     const userId = getCurrentUserId()
@@ -38,19 +44,22 @@ export default function SettingsPage() {
     const [editNickname, setEditNickname] = useState("")
     const [editAvatar, setEditAvatar] = useState("")
     const [editTopic, setEditTopic] = useState("")
+    const [editPersona, setEditPersona] = useState("")
     const [hasChanges, setHasChanges] = useState(false)
 
     // Initialize edit fields when user loads
-    if (user && !editNickname && !editAvatar && !editTopic) {
+    if (user && !editNickname && !editAvatar && !editTopic && !editPersona) {
         setEditNickname(user.nickname)
         setEditAvatar(user.avatar)
         setEditTopic(user.topic)
+        setEditPersona(user.counselorPersona || "neutral")
     }
 
-    const handleFieldChange = (field: 'nickname' | 'avatar' | 'topic', value: string) => {
+    const handleFieldChange = (field: 'nickname' | 'avatar' | 'topic' | 'persona', value: string) => {
         if (field === 'nickname') setEditNickname(value)
         if (field === 'avatar') setEditAvatar(value)
         if (field === 'topic') setEditTopic(value)
+        if (field === 'persona') setEditPersona(value)
         setHasChanges(true)
         setSuccessMessage("")
     }
@@ -65,6 +74,7 @@ export default function SettingsPage() {
                 nickname: editNickname !== user?.nickname ? editNickname : undefined,
                 avatar: editAvatar !== user?.avatar ? editAvatar : undefined,
                 topic: editTopic !== user?.topic ? editTopic : undefined,
+                counselorPersona: editPersona !== user?.counselorPersona ? editPersona : undefined,
             })
             setHasChanges(false)
             setSuccessMessage("Profile updated successfully!")
@@ -164,6 +174,40 @@ export default function SettingsPage() {
                     </div>
 
                     <p className="text-xs text-gray-500 mt-3">{user.email}</p>
+                </div>
+
+                {/* Counselor Customization */}
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 shadow-lg border border-white/50">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Shield className="h-5 w-5 text-purple-500" />
+                        <h3 className="font-bold text-gray-800">Counselor Identity</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2">
+                        {personas.map((p) => (
+                            <div
+                                key={p.value}
+                                onClick={() => handleFieldChange('persona', p.value)}
+                                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${editPersona === p.value
+                                    ? "border-purple-500 bg-purple-50"
+                                    : "border-purple-50/50 bg-white/50 hover:border-purple-200"
+                                    }`}
+                            >
+                                <span className="text-xl">{p.icon}</span>
+                                <div className="flex-1">
+                                    <p className="font-bold text-gray-800 text-sm">{p.label}</p>
+                                    <p className="text-[10px] text-gray-500 font-medium">
+                                        {p.value === "sister_mabinty" ? "Caring & maternal tone" :
+                                            p.value === "brother_sorie" ? "Supportive & brotherly tone" :
+                                                "Professional and balanced"}
+                                    </p>
+                                </div>
+                                {editPersona === p.value && (
+                                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Topic Selection */}

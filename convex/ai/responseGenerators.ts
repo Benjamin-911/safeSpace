@@ -57,13 +57,13 @@ export class SierraLeoneResponseGenerator {
     }
   ]
 
-  generateResponse(intent: string, message: string, facts?: string[]): string {
+  generateResponse(intent: string, message: string, facts?: string[], persona: string = "neutral"): string {
     const messageLower = message.toLowerCase()
 
     let baseResponse: string
     switch (intent) {
       case "greeting":
-        baseResponse = this.getGreetingResponse(messageLower)
+        baseResponse = this.getGreetingResponse(messageLower, persona)
         break
       case "emergency":
         baseResponse = this.getEmergencyResponse()
@@ -103,6 +103,9 @@ export class SierraLeoneResponseGenerator {
         break
     }
 
+    // Apply persona tone adjustments
+    baseResponse = this.applyPersonaTone(baseResponse, persona)
+
     // Integrate facts naturally into the response
     if (facts && facts.length > 0) {
       return this.synthesizeFacts(baseResponse, facts, intent)
@@ -111,7 +114,27 @@ export class SierraLeoneResponseGenerator {
     return baseResponse
   }
 
+  private applyPersonaTone(response: string, persona: string): string {
+    if (persona === "sister_mabinty") {
+      // Add maternal/sisterly prefixes or suffixes if they don't already exist
+      if (!response.includes("my dear") && !response.includes("my child")) {
+        const additives = ["My dear,", "My sister,", "Please know that"]
+        const prefix = additives[Math.floor(Math.random() * additives.length)]
+        response = `${prefix} ${response.charAt(0).toLowerCase() + response.slice(1)}`
+      }
+    } else if (persona === "brother_sorie") {
+      // Add brotherly/protective prefixes
+      if (!response.includes("my brother") && !response.includes("me pikin")) {
+        const additives = ["My brother,", "Listen,", "Stay strong,"]
+        const prefix = additives[Math.floor(Math.random() * additives.length)]
+        response = `${prefix} ${response.charAt(0).toLowerCase() + response.slice(1)}`
+      }
+    }
+    return response
+  }
+
   private synthesizeFacts(baseResponse: string, facts: string[], intent: string): string {
+    // ... (rest of the synthesizeFacts method)
     // Extract helpful contact info from facts
     const phoneNumbers: string[] = []
     const resources: string[] = []
@@ -181,11 +204,36 @@ You are not alone. Help is available NOW. Your life has value, and there are peo
     return "I hear you're in crisis right now. This feels overwhelming, but it will pass. Take slow, deep breaths. Focus on getting through the next few minutes. Would it help to talk to someone right now? You can call 919 or go to Kissy Hospital. I'm here to listen too."
   }
 
-  private getGreetingResponse(message: string): string {
+  private getGreetingResponse(message: string, persona: string = "neutral"): string {
     // Handle Krio greetings
     if (message.includes("na so") || message.includes("kushe") ||
       message.includes("how de") || message.includes("how you dey")) {
-      return "Na so! I dey fine, thank you. How you dey? I'm here to listen and support you. Wetin dey worry you today?"
+      let krioGreeting = "Na so! I dey fine, thank you. How you dey? I'm here to listen and support you. Wetin dey worry you today?"
+      if (persona === "sister_mabinty") {
+        krioGreeting = "Na so, me sister/brother! I dey fine. How you dey feel today? Sister Mabinty de ya for listen to you. Wetin dey worry you?"
+      } else if (persona === "brother_sorie") {
+        krioGreeting = "Na so, me brother/sister! I dey fine. How you dey? Brother Sorie de ya for support you. Talk to me, wetin dey on your mind?"
+      }
+      return krioGreeting
+    }
+
+    // Persona-specific English greetings
+    if (persona === "sister_mabinty") {
+      const mabintyGreetings = [
+        "Hello, I am Sister Mabinty. I'm so glad you reached out to me today. I'm here to listen with a sisterly heart. How are you feeling?",
+        "Welcome, my dear. I am Sister Mabinty, and I'm here to support you through whatever you're facing. What's on your mind?",
+        "Hi there. It takes a lot of strength to talk about these things. I'm Sister Mabinty, and I'm here for you. How was your day?"
+      ]
+      return mabintyGreetings[Math.floor(Math.random() * mabintyGreetings.length)]
+    }
+
+    if (persona === "brother_sorie") {
+      const sorieGreetings = [
+        "Hello, I am Brother Sorie. I'm here to stand by you and support you. You're not alone in this. What's bothering you today?",
+        "Welcome. I'm Brother Sorie. Thank you for trusting me. Let's talk about what's on your mind. How are you holding up?",
+        "Hi. I'm Brother Sorie, and I'm here to listen and help you find strength. What can we work through together today?"
+      ]
+      return sorieGreetings[Math.floor(Math.random() * sorieGreetings.length)]
     }
 
     // Regular greetings

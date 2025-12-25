@@ -87,6 +87,7 @@ export const registerUser = mutation({
     nickname: v.string(),
     avatar: v.string(),
     topic: v.string(),
+    counselorPersona: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Validate password length
@@ -106,7 +107,7 @@ export const registerUser = mutation({
       .first()
 
     if (existingUser) {
-      throw new Error("An account with this email already exists. Please login instead.")
+      throw new Error("Welcome back! It looks like you've already joined SafeSpace with this email. Please try logging in instead, we're here to listen.")
     }
 
     // Hash the password
@@ -119,6 +120,7 @@ export const registerUser = mutation({
       nickname: args.nickname,
       avatar: args.avatar,
       topic: args.topic,
+      counselorPersona: args.counselorPersona || "neutral",
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
     })
@@ -204,6 +206,7 @@ export const updateProfile = mutation({
     nickname: v.optional(v.string()),
     avatar: v.optional(v.string()),
     topic: v.optional(v.string()),
+    counselorPersona: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const updates: Record<string, string> = {}
@@ -216,6 +219,9 @@ export const updateProfile = mutation({
     }
     if (args.topic) {
       updates.topic = args.topic
+    }
+    if (args.counselorPersona) {
+      updates.counselorPersona = args.counselorPersona
     }
 
     if (Object.keys(updates).length === 0) {
