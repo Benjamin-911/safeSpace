@@ -1,6 +1,6 @@
 /**
- * @copyright 2024-2025 Angel Maborneh (SafeSpace Salone). All rights reserved.
- * This source code is confidential and proprietary to Angel Maborneh.
+ * @copyright 2024-2025 Bernard Gamanga (SafeSpace Salone). All rights reserved.
+ * This source code is confidential and proprietary to Bernard Gamanga.
  */
 "use client"
 
