@@ -1,3 +1,7 @@
+/**
+ * @copyright 2024-2025 Angel Maborneh (SafeSpace Salone). All rights reserved.
+ * This source code is confidential and proprietary to Angel Maborneh.
+ */
 "use client"
 
 import type React from "react"
