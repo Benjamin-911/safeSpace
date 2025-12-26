@@ -43,7 +43,10 @@ export const processMessage = action({
 
     // 2. Get user context and long-term memory
     const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId as any })
-    const latestSummary = await ctx.runQuery(api.summaries.getLatestSummary, { userId: args.userId })
+    const isGuest = !user?.email
+
+    // Only fetch summary if not a guest - Respect "No Memory" for anonymous users
+    const latestSummary = isGuest ? null : await ctx.runQuery(api.summaries.getLatestSummary, { userId: args.userId })
     const messages = await ctx.runQuery(api.messages.getMessages, { userId: args.userId })
 
     const enhancedContext: any = {
@@ -137,27 +140,30 @@ export const processMessage = action({
     }
 
     // 5. Trigger long-term memory summarization if needed (background)
-    const unsummarizedCount = messages.length - (latestSummary?.messageCount || 0)
-    if (unsummarizedCount > 15) {
-      console.log(`[summarization] Triggering summary for user ${args.userId}...`)
-      const summaryPayload = messages.map(m => ({
-        role: m.sender === "counselor" ? "counselor" as const : "user" as const,
-        content: m.content
-      }))
+    // Only for full users - Guests have no long-term memory
+    if (!isGuest) {
+      const unsummarizedCount = messages.length - (latestSummary?.messageCount || 0)
+      if (unsummarizedCount > 15) {
+        console.log(`[summarization] Triggering summary for user ${args.userId}...`)
+        const summaryPayload = messages.map(m => ({
+          role: m.sender === "counselor" ? "counselor" as const : "user" as const,
+          content: m.content
+        }))
 
-      // Run summarization action and save result
-      ctx.runAction(api.ai.summarizer.summarizeConversation, {
-        userId: args.userId,
-        messages: summaryPayload
-      }).then((summaryContent) => {
-        if (summaryContent) {
-          ctx.runMutation(api.summaries.saveSummary, {
-            userId: args.userId,
-            content: summaryContent,
-            messageCount: messages.length
-          }).catch(e => console.error("Failed to save summary:", e))
-        }
-      }).catch(e => console.error("Summarization action failed:", e))
+        // Run summarization action and save result
+        ctx.runAction(api.ai.summarizer.summarizeConversation, {
+          userId: args.userId,
+          messages: summaryPayload
+        }).then((summaryContent) => {
+          if (summaryContent) {
+            ctx.runMutation(api.summaries.saveSummary, {
+              userId: args.userId,
+              content: summaryContent,
+              messageCount: messages.length
+            }).catch(e => console.error("Failed to save summary:", e))
+          }
+        }).catch(e => console.error("Summarization action failed:", e))
+      }
     }
 
     return finalResponse
