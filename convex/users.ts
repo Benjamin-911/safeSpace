@@ -66,6 +66,7 @@ export const createUser = mutation({
     nickname: v.string(),
     avatar: v.string(),
     topic: v.string(),
+    counselorPersona: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await ctx.db.insert("users", {
@@ -73,7 +74,9 @@ export const createUser = mutation({
       nickname: args.nickname,
       avatar: args.avatar,
       topic: args.topic,
+      counselorPersona: args.counselorPersona || "neutral",
       createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
     })
     return userId
   },

@@ -71,22 +71,23 @@ export default function ChatPage() {
   }, [messages, isAIThinking])
 
   const sendTextMessage = async () => {
-    if (!text.trim() || !userId || !user) return
-
-    // Save user message
-    await sendMessageMutation({
-      userId,
-      content: text.trim(),
-      sender: "user",
-      type: "text",
-    })
-
     const messageText = text.trim()
+    if (!messageText || !userId || !user) return
+
+    // Optimistic Update: Clear input immediately to make it feel instant
     setText("")
 
-    // Generate AI counselor response
-    setIsAIThinking(true)
+    // Smooth scroll to bottom to show intention (rely on Convex sub for actual message content)
+    setIsAIThinking(true) // Show thinking state early
+
     try {
+      // Save user message (await in background mostly, or fast enough)
+      await sendMessageMutation({
+        userId,
+        content: messageText,
+        sender: "user",
+        type: "text",
+      })
       // Build conversation history from messages
       const conversationHistory = (messages || [])
         .slice(-10)
