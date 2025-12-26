@@ -348,7 +348,7 @@ export default function HomePage() {
           <p className="text-gray-600 text-sm">
             Already have an account?{" "}
             <Link href="/login" className="text-purple-600 font-semibold hover:text-purple-700 underline">
-              Sign in here // Changed link to /login
+              Sign in here
             </Link>
           </p>
         </div>
