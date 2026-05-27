@@ -22,6 +22,22 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
+  // Convex errors often arrive as "Uncaught Error: <message>".
+  // Strip wrapper/technical text so the UI shows a clean sentence.
+  const getCleanAuthErrorMessage = (err: unknown) => {
+    const fallback = "Login failed. Please try again."
+    const message = (err as any)?.message
+    if (!message || typeof message !== "string") return fallback
+
+    const match = message.match(/Uncaught Error:\s*(.+?)(?:\.|$)/)
+    if (match?.[1]) return match[1].trim()
+
+    // If it still contains Convex markers, don't surface it.
+    if (message.includes("[CONVEX")) return fallback
+
+    return message.trim() || fallback
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -46,7 +62,7 @@ export default function LoginPage() {
       router.push("/chat")
     } catch (err: any) {
       console.error("Login error:", err)
-      setError(err.message || "Login failed. Please try again.")
+      setError(getCleanAuthErrorMessage(err))
       setIsLoading(false)
     }
   }
