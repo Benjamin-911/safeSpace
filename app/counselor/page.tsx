@@ -1,40 +1,59 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
+import { useQuery, useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChatMessage } from "@/components/chat-message"
 import { getAvatarById } from "@/components/avatar-selector"
-import { getUsers, getMessages, saveMessage, generateId, type User, type Message } from "@/lib/storage"
 import { Shield, ArrowLeft, Send, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+interface User {
+  _id: string
+  nickname: string
+  avatar: string
+  topic: string
+  createdAt: string
+  lastMessage?: {
+    content: string
+    timestamp: string
+  } | null
+}
 
 export default function CounselorPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [password, setPassword] = useState("")
-  const [users, setUsers] = useState<User[]>([])
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
   const [reply, setReply] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      setUsers(getUsers())
-    }
-  }, [isLoggedIn])
+  // Fetch users and messages using Convex hooks reactively
+  const users = useQuery(api.users.getUsersWithLastMessage) || []
+  
+  const messages = useQuery(
+    api.messages.getMessages,
+    selectedUser ? { userId: selectedUser._id } : "skip"
+  ) || []
 
-  useEffect(() => {
-    if (selectedUser) {
-      setMessages(getMessages(selectedUser.id))
-    }
-  }, [selectedUser])
+  const sendMessageMutation = useMutation(api.messages.sendMessage)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  // Sync selectedUser with updated user data to keep nickname/topic/avatar fresh
+  useEffect(() => {
+    if (selectedUser && users.length > 0) {
+      const updatedUser = users.find((u) => u._id === selectedUser._id)
+      if (updatedUser) {
+        setSelectedUser(updatedUser as User)
+      }
+    }
+  }, [users, selectedUser])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,21 +63,22 @@ export default function CounselorPage() {
     }
   }
 
-  const sendReply = () => {
+  const sendReply = async () => {
     if (!reply.trim() || !selectedUser) return
 
-    const message: Message = {
-      id: generateId(),
-      userId: selectedUser.id,
-      content: reply.trim(),
-      sender: "counselor",
-      type: "text",
-      timestamp: new Date().toISOString(),
-    }
-
-    saveMessage(selectedUser.id, message)
-    setMessages((prev) => [...prev, message])
+    const messageText = reply.trim()
     setReply("")
+
+    try {
+      await sendMessageMutation({
+        userId: selectedUser._id,
+        content: messageText,
+        sender: "counselor",
+        type: "text",
+      })
+    } catch (err) {
+      console.error("Failed to send reply:", err)
+    }
   }
 
   // Login screen
@@ -100,6 +120,17 @@ export default function CounselorPage() {
   if (selectedUser) {
     const userAvatar = getAvatarById(selectedUser.avatar)
 
+    // Map Convex messages to expected UI format
+    const formattedMessages = messages.map((msg) => ({
+      id: msg._id,
+      userId: msg.userId,
+      content: msg.content,
+      sender: msg.sender,
+      type: msg.type,
+      timestamp: msg.timestamp,
+      audioUrl: msg.audioUrl,
+    }))
+
     return (
       <div className="min-h-dvh flex flex-col bg-background">
         {/* Header */}
@@ -125,7 +156,7 @@ export default function CounselorPage() {
 
         {/* Messages */}
         <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4 space-y-2 sm:space-y-3 pb-safe">
-          {messages.map((message) => (
+          {formattedMessages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
           <div ref={messagesEndRef} />
@@ -183,13 +214,12 @@ export default function CounselorPage() {
         ) : (
           users.map((u) => {
             const avatar = getAvatarById(u.avatar)
-            const userMessages = getMessages(u.id)
-            const lastMessage = userMessages[userMessages.length - 1]
+            const lastMessage = u.lastMessage
 
             return (
               <button
-                key={u.id}
-                onClick={() => setSelectedUser(u)}
+                key={u._id}
+                onClick={() => setSelectedUser(u as User)}
                 className="w-full flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-card rounded-xl border border-border hover:bg-secondary active:bg-secondary transition-colors text-left touch-manipulation"
               >
                 <div
@@ -214,4 +244,3 @@ export default function CounselorPage() {
     </div>
   )
 }
-

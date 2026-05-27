@@ -1,4 +1,4 @@
-// API Route for OpenAI Whisper Audio Transcription
+// API Route for Groq Whisper Audio Transcription
 
 import { NextRequest, NextResponse } from "next/server"
 
@@ -6,7 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File
-    const model = formData.get("model") || "whisper-1"
     const language = formData.get("language") || "en"
 
     if (!file) {
@@ -16,30 +15,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const openAIApiKey = process.env.OPENAI_API_KEY
+    const groqApiKey = process.env.GROQ_API_KEY
 
-    if (!openAIApiKey) {
+    if (!groqApiKey) {
       return NextResponse.json(
-        { error: "OpenAI API key not configured. Using fallback transcription." },
+        { error: "Groq API key not configured. Using fallback transcription." },
         { status: 500 }
       )
     }
 
-    // Convert File to format OpenAI expects
+    // Convert File to format Groq expects
     const audioFile = new File([file], file.name, { type: file.type || "audio/webm" })
 
-    // Call OpenAI Whisper API
+    // Call Groq Whisper API
     const whisperFormData = new FormData()
     whisperFormData.append("file", audioFile)
-    whisperFormData.append("model", model as string)
+    // Use Groq's high-speed whisper-large-v3-turbo model
+    whisperFormData.append("model", "whisper-large-v3-turbo")
     if (language) {
       whisperFormData.append("language", language as string)
     }
 
-    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${openAIApiKey}`,
+        Authorization: `Bearer ${groqApiKey}`,
       },
       body: whisperFormData,
     })

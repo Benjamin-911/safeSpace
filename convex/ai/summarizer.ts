@@ -51,3 +51,39 @@ export const summarizeConversation = action({
         return result.response;
     },
 });
+
+/**
+ * AI Action to summarize a conversation and save it to the database.
+ * Designed to be reliably scheduled as a background job.
+ */
+export const summarizeAndSave = action({
+    args: {
+        userId: v.string(),
+        messages: v.array(v.object({
+            role: v.union(v.literal("user"), v.literal("counselor")),
+            content: v.string(),
+        })),
+        messageCount: v.number(),
+    },
+    handler: async (ctx, args) => {
+        console.log(`[summarization-job] Starting background summarization for user ${args.userId}...`);
+        
+        // We can invoke the action logic directly by calling runAction on ourselves
+        const summaryContent = await ctx.runAction(api.ai.summarizer.summarizeConversation, {
+            userId: args.userId,
+            messages: args.messages
+        });
+
+        if (summaryContent) {
+            console.log(`[summarization-job] Summary generated. Saving to DB...`);
+            await ctx.runMutation(api.summaries.saveSummary, {
+                userId: args.userId,
+                content: summaryContent,
+                messageCount: args.messageCount
+            });
+            console.log(`[summarization-job] Summary successfully saved for user ${args.userId}.`);
+        } else {
+            console.warn(`[summarization-job] Summarization returned empty content. Skip saving.`);
+        }
+    }
+});

@@ -6,7 +6,7 @@ import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 
 // Simple hash function for passwords (for production, consider bcrypt via external action)
-function simpleHash(password: string): string {
+export function simpleHash(password: string): string {
   let hash = 0
   for (let i = 0; i < password.length; i++) {
     const char = password.charCodeAt(i)
@@ -234,4 +234,48 @@ export const updateProfile = mutation({
     await ctx.db.patch(args.userId, updates)
     return { updated: true }
   },
+})
+
+// Query to get all users with their last message
+export const getUsersWithLastMessage = query({
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect()
+    const latestMessageByUser = new Map<string, { content: string; timestamp: string }>()
+    const messages = await ctx.db.query("messages").order("desc").collect()
+
+    // Walk newest-first and keep only the first message per user.
+    for (const message of messages) {
+      if (!latestMessageByUser.has(message.userId)) {
+        latestMessageByUser.set(message.userId, {
+          content: message.content,
+          timestamp: message.timestamp,
+        })
+      }
+    }
+
+    const usersWithLastMessage = users.map((user) => {
+      const safeUser = {
+        _id: user._id,
+        email: user.email,
+        nickname: user.nickname,
+        avatar: user.avatar,
+        topic: user.topic,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+        counselorPersona: user.counselorPersona,
+      }
+
+      return {
+        ...safeUser,
+        lastMessage: latestMessageByUser.get(String(user._id)) ?? null,
+      }
+    })
+    
+    // Sort by last message timestamp desc (users with recent activity first)
+    return usersWithLastMessage.sort((a, b) => {
+      const timeA = a.lastMessage?.timestamp || a.createdAt
+      const timeB = b.lastMessage?.timestamp || b.createdAt
+      return new Date(timeB).getTime() - new Date(timeA).getTime()
+    })
+  }
 })

@@ -7,16 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ArrowLeft, KeyRound, Mail, CheckCircle2 } from "lucide-react"
-
-// Basic sha256 function if not available in utils
-async function hashPassword(text: string) {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(text)
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
-}
+import { ArrowLeft, KeyRound, Mail } from "lucide-react"
 
 export default function ForgotPasswordPage() {
     const router = useRouter()
@@ -55,11 +46,10 @@ export default function ForgotPasswordPage() {
         e.preventDefault()
         setIsLoading(true)
         try {
-            const passwordHash = await hashPassword(newPassword)
             const result = await resetPassword({
                 email,
                 token,
-                newPasswordHash: passwordHash
+                newPassword: newPassword
             })
 
             if (result.success) {

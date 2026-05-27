@@ -144,25 +144,18 @@ export const processMessage = action({
     if (!isGuest) {
       const unsummarizedCount = messages.length - (latestSummary?.messageCount || 0)
       if (unsummarizedCount > 15) {
-        console.log(`[summarization] Triggering summary for user ${args.userId}...`)
+        console.log(`[summarization] Scheduling background summary for user ${args.userId}...`)
         const summaryPayload = messages.map(m => ({
           role: m.sender === "counselor" ? "counselor" as const : "user" as const,
           content: m.content
         }))
 
-        // Run summarization action and save result
-        ctx.runAction(api.ai.summarizer.summarizeConversation, {
+        // Schedule background job to run immediately
+        await ctx.scheduler.runAfter(0, api.ai.summarizer.summarizeAndSave, {
           userId: args.userId,
-          messages: summaryPayload
-        }).then((summaryContent) => {
-          if (summaryContent) {
-            ctx.runMutation(api.summaries.saveSummary, {
-              userId: args.userId,
-              content: summaryContent,
-              messageCount: messages.length
-            }).catch(e => console.error("Failed to save summary:", e))
-          }
-        }).catch(e => console.error("Summarization action failed:", e))
+          messages: summaryPayload,
+          messageCount: messages.length
+        })
       }
     }
 

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { simpleHash } from "./users";
 
 export const generateResetToken = mutation({
     args: { email: v.string() },
@@ -34,9 +35,13 @@ export const resetPasswordWithToken = mutation({
     args: {
         email: v.string(),
         token: v.string(),
-        newPasswordHash: v.string(),
+        newPassword: v.string(),
     },
     handler: async (ctx, args) => {
+        if (args.newPassword.length < 6) {
+            return { success: false, error: "Password must be at least 6 characters" };
+        }
+
         const user = await ctx.db
             .query("users")
             .withIndex("by_email", (q) => q.eq("email", args.email))
@@ -55,8 +60,10 @@ export const resetPasswordWithToken = mutation({
             return { success: false, error: "Invalid or expired token" };
         }
 
+        const passwordHash = simpleHash(args.newPassword);
+
         await ctx.db.patch(user._id, {
-            passwordHash: args.newPasswordHash,
+            passwordHash,
             resetToken: undefined,
             resetTokenExpiry: undefined,
         });
