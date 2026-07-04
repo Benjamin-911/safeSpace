@@ -10,22 +10,22 @@ export function simpleHash(password: string): string {
   // Let's implement a robust hash helper. In Convex actions we can use webcrypto, but since simpleHash is synchronous and called from mutations, we can use a secure SHA-256 representation if available, or a strong SHA-256 JS implementation.
   // Let's write a pure-JS implementation of SHA-256 to ensure zero external dependency and perfect synchronous execution in all Convex runtimes.
   function sha256(ascii: string): string {
-    function rightRotate(value: number, amount: number) {
+    function rightRotate(value: number, amount: number): number {
       return (value >>> amount) | (value << (32 - amount));
     }
     
     const mathPow = Math.pow;
     const maxWord = mathPow(2, 32);
-    const result = [];
+    const result: string[] = [];
     const words: number[] = [];
     const asciiLength = ascii.length;
     
-    const hash = [
+    const hash: number[] = [
       0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
       0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
     ];
     
-    const k = [
+    const k: number[] = [
       0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
       0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
       0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -36,7 +36,7 @@ export function simpleHash(password: string): string {
       0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
     ];
     
-    let i, j;
+    let i: number, j: number;
     const wordsLength = ((asciiLength + 8) >> 6) + 1;
     for (i = 0; i < wordsLength * 16; i++) {
       words[i] = 0;
@@ -48,13 +48,13 @@ export function simpleHash(password: string): string {
     words[wordsLength * 16 - 1] = asciiLength * 8;
     
     for (i = 0; i < words.length; i += 16) {
-      const w = [];
+      const w: number[] = [];
       for (j = 0; j < 16; j++) {
         w[j] = words[i + j];
       }
       for (j = 16; j < 64; j++) {
-        const s0 = rightRotate(w[j - 15], 7) ^ rightRotate(w[j - 15], 18) ^ (w[j - 15] >>> 3);
-        const s1 = rightRotate(w[j - 2], 17) ^ rightRotate(w[j - 2], 19) ^ (w[j - 2] >>> 10);
+        const s0: number = rightRotate(w[j - 15], 7) ^ rightRotate(w[j - 15], 18) ^ (w[j - 15] >>> 3);
+        const s1: number = rightRotate(w[j - 2], 17) ^ rightRotate(w[j - 2], 19) ^ (w[j - 2] >>> 10);
         w[j] = (w[j - 16] + s0 + w[j - 7] + s1) | 0;
       }
       
