@@ -142,7 +142,7 @@ Provide thoughtful, complete responses that help users feel heard and supported.
       return NextResponse.json(
         {
           error: "Network error",
-          message: "Unable to connect to OpenAI API. Please check your internet connection.",
+          message: "Unable to connect to Gemini API. Please check your internet connection.",
           code: "NETWORK_ERROR",
           fallback: true
         },

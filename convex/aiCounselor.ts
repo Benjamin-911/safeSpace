@@ -42,7 +42,7 @@ export const processMessage = action({
     }
 
     // 2. Get user context and long-term memory
-    const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId as any })
+    const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId })
     const isGuest = !user?.email
 
     // Only fetch summary if not a guest - Respect "No Memory" for anonymous users

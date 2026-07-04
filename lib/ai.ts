@@ -330,13 +330,7 @@ async function generateAIResponseWithConvexAI(
   conversationHistory: string[] = []
 ): Promise<AIResponse> {
   try {
-    // Import dynamically to avoid SSR issues
-    const { useMutation } = await import("convex/react")
-    const { api } = await import("@/convex/_generated/api")
-    
-    // Call Convex AI mutation
-    // Note: This needs to be called from a React component with useMutation
-    // For now, we'll use fetch to call the Convex function directly
+    // Call Convex AI endpoint via standard fetch (since this executes inside NextJS Edge/Server, we query the chat API or Convex HTTP actions if registered)
     const response = await fetch("/api/convex-ai", {
       method: "POST",
       headers: {
