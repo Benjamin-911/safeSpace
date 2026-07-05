@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useMutation } from "convex/react"
+import { useMutation, useAction } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { ArrowLeft, KeyRound, Mail } from "lucide-react"
 
 export default function ForgotPasswordPage() {
     const router = useRouter()
-    const generateToken = useMutation(api.auth_reset.generateResetToken)
+    const generateToken = useAction(api.auth_reset.generateResetToken)
     const resetPassword = useMutation(api.auth_reset.resetPasswordWithToken)
 
     const [step, setStep] = useState<1 | 2>(1)
@@ -29,10 +29,12 @@ export default function ForgotPasswordPage() {
             if (result.success) {
                 setStep(2)
                 if (result.debugToken) {
+                    // Dev-only fallback: no RESEND_API_KEY configured on this deployment,
+                    // so the code is surfaced here instead of being emailed.
                     setDebugToken(result.debugToken)
-                    toast.success(`Verification code sent! (Demo: ${result.debugToken})`)
+                    toast.warning(`No email service configured - dev code: ${result.debugToken}`)
                 } else {
-                    toast.success("Verification code sent to your email")
+                    toast.success("If that email exists, a verification code has been sent.")
                 }
             }
         } catch (error) {

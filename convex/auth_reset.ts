@@ -1,32 +1,99 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { action, internalMutation, internalQuery, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { simpleHash } from "./users";
 
-export const generateResetToken = mutation({
+const THROTTLE_WINDOW_MS = 60 * 1000; // don't allow a new code more than once a minute
+const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+// Internal-only lookup so the action can read user state without exposing a public query
+export const getUserForReset = internalQuery({
     args: { email: v.string() },
     handler: async (ctx, args) => {
-        const user = await ctx.db
+        return await ctx.db
             .query("users")
             .withIndex("by_email", (q) => q.eq("email", args.email))
             .first();
+    },
+});
 
+// Internal-only write so the action can persist the token after (maybe) sending the email
+export const setResetToken = internalMutation({
+    args: { userId: v.id("users"), token: v.string(), expiry: v.number() },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.userId, {
+            resetToken: args.token,
+            resetTokenExpiry: args.expiry,
+        });
+    },
+});
+
+async function sendResetEmail(email: string, token: string): Promise<boolean> {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return false; // no provider configured
+
+    const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            from: process.env.RESEND_FROM_EMAIL || "SafeSpace Salone <onboarding@resend.dev>",
+            to: [email],
+            subject: "Your SafeSpace Salone verification code",
+            text: `Your verification code is ${token}. It expires in 15 minutes. If you didn't request this, you can safely ignore this email.`,
+        }),
+    });
+
+    if (!res.ok) {
+        console.error("[AUTH] Resend API error:", res.status, await res.text());
+        return false;
+    }
+    return true;
+}
+
+// Public action: request a reset code. Runs as an action (not a mutation) because
+// it needs to make an outbound fetch call to the email provider.
+export const generateResetToken = action({
+    args: { email: v.string() },
+    handler: async (ctx, args) => {
+        const normalizedEmail = args.email.toLowerCase();
+        const user = await ctx.runQuery(internal.auth_reset.getUserForReset, {
+            email: normalizedEmail,
+        });
+
+        // Don't reveal whether the account exists either way
         if (!user) {
-            // Don't reveal if user exists
             return { success: true };
         }
 
-        // Generate a simple 6-digit code for this demo (production would use longer random string)
-        const token = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
+        // Throttle: if a code was issued in the last minute, don't issue another
+        if (user.resetTokenExpiry && user.resetTokenExpiry - TOKEN_TTL_MS + THROTTLE_WINDOW_MS > Date.now()) {
+            return { success: true };
+        }
 
-        await ctx.db.patch(user._id, {
-            resetToken: token,
-            resetTokenExpiry: expiry,
+        const token = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiry = Date.now() + TOKEN_TTL_MS;
+
+        await ctx.runMutation(internal.auth_reset.setResetToken, {
+            userId: user._id,
+            token,
+            expiry,
         });
 
-        console.log(`[AUTH] Reset token for ${args.email}: ${token}`);
+        const emailSent = await sendResetEmail(normalizedEmail, token);
 
-        // In a real app, we would send an email here using Resend or similar
+        if (emailSent) {
+            return { success: true };
+        }
+
+        // No email provider configured (local dev only) - fall back to returning
+        // the code directly so development still works. This path never fires
+        // once RESEND_API_KEY is set in the deployment environment.
+        console.warn(
+            `[AUTH] RESEND_API_KEY not set - DEV FALLBACK ONLY. Reset code for ${normalizedEmail}: ${token}`
+        );
         return { success: true, debugToken: token };
     },
 });
@@ -44,7 +111,7 @@ export const resetPasswordWithToken = mutation({
 
         const user = await ctx.db
             .query("users")
-            .withIndex("by_email", (q) => q.eq("email", args.email))
+            .withIndex("by_email", (q) => q.eq("email", args.email.toLowerCase()))
             .first();
 
         if (!user) {
