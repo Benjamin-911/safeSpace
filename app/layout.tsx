@@ -1,12 +1,9 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ConvexClientProvider } from "@/components/convex-provider"
 import { PwarRegistration } from "@/components/pwa-registration"
 import "./globals.css"
-
-const _inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "SafeSpace Salone",
@@ -47,8 +44,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
+    <html lang="en">
+      <body className="font-sans antialiased">
         <ConvexClientProvider>
           <PwarRegistration />
           {children}
