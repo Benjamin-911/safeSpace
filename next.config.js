@@ -13,7 +13,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.vercel-insights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.convex.dev https://cdn.vercel-insights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.vercel-insights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https://frontend-cdn.perplexity.ai; connect-src 'self' https://api.convex.dev https://cdn.vercel-insights.com wss://patient-skunk-533.convex.cloud; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
           },
           {
             key: 'X-Content-Type-Options',
